@@ -593,6 +593,10 @@
             color: var(--text-primary);
         }
 
+        .var-value.list {
+            color: var(--accent-amber);
+        }
+
         .var-type {
             color: var(--text-muted);
             font-size: 12px;
@@ -629,66 +633,131 @@
             color: var(--accent-amber);
         }
 
-        /* ---- Pattern Output ---- */
-        .pattern-output {
+        .stack-val.list {
+            color: var(--accent-green);
+        }
+
+        /* ---- Console Output ---- */
+        .console-output {
             flex: 1;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-secondary);
+            flex-direction: column;
+            background: #0a0d14;
             border-radius: 6px;
             min-height: 120px;
             position: relative;
             overflow: hidden;
-            border: 1px dashed var(--border-color);
-        }
-
-        .pattern-grid {
-            display: grid;
-            grid-template-columns: repeat(16, 1fr);
-            gap: 3px;
-            width: 100%;
-            padding: 12px;
-            max-height: 160px;
-            overflow: auto;
-        }
-
-        .pattern-cell {
-            aspect-ratio: 1;
-            border-radius: 3px;
-            background: var(--bg-card);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             border: 1px solid var(--border-color);
-            min-width: 12px;
-            min-height: 12px;
         }
 
-        .pattern-cell.active {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-            transform: scale(1.05);
+        .console-header {
+            padding: 8px 16px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
         }
 
-        .pattern-cell.active-alt {
-            background: var(--accent-purple);
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-            transform: scale(1.05);
+        .console-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
         }
 
-        .pattern-cell.active-green {
-            background: var(--accent-green);
-            border-color: var(--accent-green);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-            transform: scale(1.05);
+        .console-clear-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            font-family: var(--font-mono);
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
         }
 
-        .pattern-cell.active-amber {
-            background: var(--accent-amber);
-            border-color: var(--accent-amber);
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
-            transform: scale(1.05);
+        .console-clear-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .console-body {
+            flex: 1;
+            overflow: auto;
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        .console-line {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .console-line.input {
+            color: var(--accent-blue);
+        }
+
+        .console-line.output {
+            color: var(--text-primary);
+        }
+
+        .console-line.error {
+            color: var(--accent-red);
+        }
+
+        .console-line.success {
+            color: var(--accent-green);
+        }
+
+        .console-line.info {
+            color: var(--text-secondary);
+        }
+
+        /* ---- Console Input ---- */
+        .console-input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            gap: 8px;
+        }
+
+        .console-prompt-symbol {
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .console-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 0;
+        }
+
+        .console-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .console-prompt {
+            color: var(--accent-green);
+            font-weight: 600;
         }
 
         /* ---- Empty state ---- */
@@ -884,13 +953,13 @@
 <header class="page-header">
     <div class="page-title-group">
         <h1 class="page-title">HexParse Interpreter</h1>
-        <span class="page-badge">v2.4 · dev</span>
+        <span class="page-badge">v3.0 · full</span>
     </div>
     <div class="page-status">
         <span class="status-dot"></span>
-        <span>系统就绪</span>
+        <span>解释器就绪</span>
         <span style="color:var(--text-muted);margin-left:4px;">·</span>
-        <span style="color:var(--text-muted);">内存 128KB</span>
+        <span style="color:var(--text-muted);" id="statusText">等待输入</span>
     </div>
 </header>
 
@@ -932,11 +1001,9 @@
 
             <div class="toolbar-group">
                 <select class="toolbar-select" id="exampleSelect">
-                    <option value="fib">斐波那契数列</option>
-                    <option value="sort">冒泡排序</option>
-                    <option value="hexdump" selected>十六进制转储</option>
-                    <option value="pattern">图案生成器</option>
-                    <option value="brainfuck">Brainfuck 解释器</option>
+                    <option value="circle">画圆</option>
+                    <option value="basic">基础测试</option>
+                    <option value="local">局部变量</option>
                 </select>
             </div>
 
@@ -951,12 +1018,12 @@
             <div class="toolbar-divider"></div>
 
             <div class="toolbar-group" style="margin-left:auto;">
-                <button class="btn btn-primary" id="btnCompile" title="编译">
+                <button class="btn btn-primary" id="btnCompile" title="运行全部">
                     <svg viewBox="0 0 24 24" width="16" height="16">
                         <path d="M6 7h12M6 12h8M6 17h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
                         <rect x="2" y="3" width="20" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
                     </svg>
-                    编译
+                    运行全部
                 </button>
             </div>
         </div>
@@ -965,7 +1032,7 @@
         <div class="code-content">
             <div class="code-editor">
                 <div class="line-numbers" id="lineNumbers"></div>
-                <textarea class="code-lines" id="codeLines"></textarea>
+                <textarea class="code-lines" id="codeLines" spellcheck="false"></textarea>
             </div>
         </div>
     </div>
@@ -975,43 +1042,42 @@
         <div class="info-grid">
             <!-- Row 1: Variables + Stack -->
             <div class="info-row">
-                <!-- Variables -->
-                <div class="info-card">
-                    <div class="info-card-header">
-                        <span class="info-card-title">📦 局部变量</span>
-                        <span class="info-card-badge" id="varCount">4</span>
-                    </div>
-                    <div class="info-card-body" id="varContainer">
-                        <div class="var-item"><span class="var-name">a</span><span class="var-value">0x3F</span><span class="var-type">byte</span></div>
-                        <div class="var-item"><span class="var-name">b</span><span class="var-value">0x1A</span><span class="var-type">byte</span></div>
-                        <div class="var-item"><span class="var-name">ptr</span><span class="var-value">0x7FFE</span><span class="var-type">word</span></div>
-                        <div class="var-item"><span class="var-name">flag</span><span class="var-value">true</span><span class="var-type">bool</span></div>
-                    </div>
-                </div>
                 <!-- Stack -->
                 <div class="info-card">
                     <div class="info-card-header">
                         <span class="info-card-title">📚 栈</span>
-                        <span class="info-card-badge" id="stackCount">6</span>
+                        <span class="info-card-badge" id="stackCount">0</span>
                     </div>
                     <div class="info-card-body" id="stackContainer">
-                        <div class="stack-item"><span class="stack-idx">#5</span><span class="stack-val">0x7FFC</span></div>
-                        <div class="stack-item"><span class="stack-idx">#4</span><span class="stack-val">0x3F</span></div>
-                        <div class="stack-item"><span class="stack-idx">#3</span><span class="stack-val">0x1A</span></div>
-                        <div class="stack-item"><span class="stack-idx">#2</span><span class="stack-val"><span class="highlight">0x00</span></span></div>
-                        <div class="stack-item"><span class="stack-idx">#1</span><span class="stack-val">0xFF</span></div>
-                        <div class="stack-item"><span class="stack-idx">#0</span><span class="stack-val">0x7F</span></div>
+                        <div class="empty-state">栈为空</div>
+                    </div>
+                </div>
+                <!-- Variables -->
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <span class="info-card-title">📦 局部变量</span>
+                        <span class="info-card-badge" id="varCount">0</span>
+                    </div>
+                    <div class="info-card-body" id="varContainer">
+                        <div class="empty-state">未设置</div>
                     </div>
                 </div>
             </div>
-            <!-- Row 2: Pattern Output -->
+            <!-- Row 2: Console Output -->
             <div class="info-card" style="flex:1.2;">
                 <div class="info-card-header">
-                    <span class="info-card-title">🎨 图案输出</span>
-                    <span class="info-card-badge">16×8</span>
+                    <span class="info-card-title">💻 控制台</span>
+                    <button class="console-clear-btn" id="consoleClear">清空</button>
                 </div>
-                <div class="pattern-output" id="patternOutput">
-                    <div class="pattern-grid" id="patternGrid"></div>
+                <div class="console-output">
+                    <div class="console-body" id="consoleBody">
+                        <p class="console-line info">// HexParse 解释器已启动</p>
+                        <p class="console-line info">// 输入命令或点击运行按钮开始</p>
+                    </div>
+                    <div class="console-input-wrap">
+                        <span class="console-prompt-symbol">❯</span>
+                        <input type="text" class="console-input" id="consoleInput" placeholder="输入命令，回车执行..." autocomplete="off" spellcheck="false"/>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1038,183 +1104,636 @@
         const btnCompile = document.getElementById('btnCompile');
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
-        const patternGrid = document.getElementById('patternGrid');
         const varContainer = document.getElementById('varContainer');
         const stackContainer = document.getElementById('stackContainer');
         const varCount = document.getElementById('varCount');
         const stackCount = document.getElementById('stackCount');
         const toastContainer = document.getElementById('toastContainer');
+        const consoleBody = document.getElementById('consoleBody');
+        const consoleClear = document.getElementById('consoleClear');
+        const statusText = document.getElementById('statusText');
 
         // ===== Sample Code =====
         const samples = {
-            fib: `; 斐波那契数列 — 计算前 10 项
-                mov   a, 0
-                mov   b, 1
-                mov   c, 10
-            .loop:
-                add   a, b
-                swap  a, b
-                dec   c
-                jnz   .loop
-                hlt`,
-            sort: `; 冒泡排序 — 对内存块排序
-                mov   ptr, 0x2000
-                mov   len, 16
-            .outer:
-                mov   i, 0
-                mov   swapped, 0
-            .inner:
-                ld    a, [ptr+i]
-                ld    b, [ptr+i+1]
-                cmp   a, b
-                jle   .skip
-                st    b, [ptr+i]
-                st    a, [ptr+i+1]
-                mov   swapped, 1
-            .skip:
-                inc   i
-                cmp   i, len-1
-                jl    .inner
-                cmp   swapped, 1
-                je    .outer
-                hlt`,
-            hexdump: `; 十六进制转储 — 读取内存区域
-                mov   addr, 0x1000
-                mov   count, 64
-            .read:
-                ld    byte, [addr]
-                call  print_hex
-                inc   addr
-                dec   count
-                jnz   .read
-                hlt`,
-            pattern: `; 图案生成器 — 绘制像素网格
-                mov   x, 0
-                mov   y, 0
-                mov   w, 16
-                mov   h, 8
-            .row:
-                mov   x, 0
-            .col:
-                call  calc_pixel
-                st    color, [pixel_buf]
-                inc   x
-                cmp   x, w
-                jl    .col
-                inc   y
-                cmp   y, h
-                jl    .row
-                hlt`,
-            brainfuck: `; Brainfuck 解释器 — Hello World!
-                ++++++++++[>+++++++>++++++++++>+++>+<<<<-]
-                >++.>+.+++++++..+++.>++.<<+++++++++++++++.
-                >.+++.------.--------.>+.>.
-                hlt`
+            circle: `const/double/tau
+(
+    swap
+    const/double/pi
+    num_30
+    div_cross
+    sub
+    duplicate
+    num_0
+    greater
+    (
+        duplicate, cos
+        num_10
+        mul_dot
+        over, sin
+        num_10
+        mul_dot
+        num_0, swap
+        construct_vec
+        get_caster, entity_pos/foot
+        add, duplicate, break_block, place_block
+        swap
+        duplicate, eval
+    )
+    (halt)
+    if, eval
+)
+duplicate, eval`,
+            basic: `// 基础测试
+num_1
+num_2
+add
+print
+const/true
+print`,
+            local: `// 局部变量测试
+num_42
+write/local
+read/local
+print
+// 列表测试
+(
+    num_1
+    num_2
+    num_3
+)
+write/local
+read/local
+print`
         };
 
-        // ===== Code Highlight =====
-        function highlightLine(line) {
-            let s = line;
-            // comments
-            s = s.replace(/(;.*)$/, '<span class="comment">$1</span>');
-            // strings
-            s = s.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
-            // numbers (hex)
-            s = s.replace(/\b(0x[0-9A-Fa-f]+)\b/g, '<span class="number">$1</span>');
-            // numbers (decimal)
-            s = s.replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
-            // keywords
-            const kw = ['mov', 'add', 'sub', 'mul', 'div', 'cmp', 'jmp', 'jnz', 'jz', 'jl', 'jle', 'jg', 'jge',
-                'ld', 'st', 'inc', 'dec', 'call', 'ret', 'hlt', 'push', 'pop', 'swap', 'nop', 'and', 'or', 'xor',
-                'shl', 'shr', 'not', 'int'
-            ];
-            const kwRegex = new RegExp('\\b(' + kw.join('|') + ')\\b', 'g');
-            s = s.replace(kwRegex, '<span class="keyword">$1</span>');
-            // registers
-            const regs = ['a', 'b', 'c', 'd', 'e', 'f', 'h', 'l', 'sp', 'bp', 'ip', 'ptr', 'addr', 'len', 'i', 'j',
-                'k', 'x', 'y', 'w', 'h', 'count', 'swapped', 'color'
-            ];
-            const regRegex = new RegExp('\\b(' + regs.join('|') + ')\\b', 'g');
-            s = s.replace(regRegex, '<span class="function">$1</span>');
-            // operators
-            s = s.replace(/([+\-*/%=<>!&|]+)/g, '<span class="operator">$1</span>');
-            return s;
+        // ===== Console =====
+        function consoleLog(message, type = 'output') {
+            const line = document.createElement('p');
+            line.className = `console-line ${type}`;
+            line.textContent = message;
+            consoleBody.appendChild(line);
+            consoleBody.scrollTop = consoleBody.scrollHeight;
         }
 
-        function renderCode(code) {
-            const lines = code.split('\n');
-            let codeHtml = '';
-            let numHtml = '';
-            lines.forEach((line, idx) => {
-                const num = idx + 1;
-                numHtml += `<span>${num}</span>`;
-                const highlighted = line.trim() === '' ? '&nbsp;' : highlightLine(line);
-                codeHtml += `<span class="line" data-line="${num}">${highlighted}</span>`;
-            });
-            lineNumbersEl.innerHTML = numHtml;
-            codeLinesEl.innerHTML = codeHtml;
+        function consoleClearFn() {
+            consoleBody.innerHTML = '<p class="console-line info">// 控制台已清空</p>';
         }
 
-        // ===== Pattern Grid =====
-        function renderPattern() {
-            const cols = 16;
-            const rows = 8;
-            const total = cols * rows;
-            let html = '';
-            for (let i = 0; i < total; i++) {
-                const r = Math.floor(i / cols);
-                const c = i % cols;
-                let cls = 'pattern-cell';
-                // deterministic pseudo-random pattern
-                const val = (r * 7 + c * 13 + 42) % 20;
-                if (val < 3) cls += ' active';
-                else if (val < 6) cls += ' active-alt';
-                else if (val < 9) cls += ' active-green';
-                else if (val < 12) cls += ' active-amber';
-                else if (val === 15) cls += ' active';
-                else if (val === 18) cls += ' active-alt';
-                html += `<div class="${cls}" data-idx="${i}"></div>`;
+        consoleClear.addEventListener('click', consoleClearFn);
+
+        // Console input REPL
+        const consoleInput = document.getElementById('consoleInput');
+        let inputHistory = [];
+        let historyIndex = -1;
+
+        function executeConsoleInput() {
+            const text = consoleInput.value.trim();
+            if (!text) return;
+
+            // Add to history
+            inputHistory.push(text);
+            historyIndex = inputHistory.length;
+
+            // Show input in console
+            consoleLog(`❯ ${text}`, 'input');
+            consoleInput.value = '';
+
+            // Execute
+            if (!mindStack) {
+                initInterpreter();
             }
-            patternGrid.innerHTML = html;
-        }
 
-        // ===== Variables & Stack =====
-        function randomHex() {
-            return '0x' + Math.floor(Math.random() * 256).toString(16).toUpperCase().padStart(2, '0');
-        }
-
-        function randomWord() {
-            return '0x' + Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, '0');
-        }
-
-        function updateVariables() {
-            const names = ['a', 'b', 'ptr', 'flag', 'tmp', 'result', 'counter', 'status'];
-            const types = ['byte', 'byte', 'word', 'bool', 'byte', 'word', 'byte', 'byte'];
-            const count = 3 + Math.floor(Math.random() * 4);
-            let html = '';
-            for (let i = 0; i < count; i++) {
-                const name = names[i % names.length];
-                const type = types[i % types.length];
-                let val;
-                if (type === 'bool') val = Math.random() > 0.5 ? 'true' : 'false';
-                else if (type === 'word') val = randomWord();
-                else val = randomHex();
-                html += `<div class="var-item"><span class="var-name">${name}</span><span class="var-value">${val}</span><span class="var-type">${type}</span></div>`;
+            const result = mindStack.runProgram(text);
+            if (result === 'halt') {
+                consoleLog('// 程序已暂停 (halt)', 'info');
+                statusText.textContent = '已暂停';
+            } else if (result === 'accident') {
+                consoleLog('// 执行出错', 'error');
+                statusText.textContent = '执行出错';
             }
-            varContainer.innerHTML = html;
-            varCount.textContent = count;
         }
 
-        function updateStack() {
-            const count = 4 + Math.floor(Math.random() * 6);
+        consoleInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeConsoleInput();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    consoleInput.value = inputHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex < inputHistory.length - 1) {
+                    historyIndex++;
+                    consoleInput.value = inputHistory[historyIndex];
+                } else {
+                    historyIndex = inputHistory.length;
+                    consoleInput.value = '';
+                }
+            }
+        });
+
+        // ===== HexParse Interpreter =====
+
+        class Vector {
+            constructor(x, y, z) {
+                this.x = parseFloat(x);
+                this.y = parseFloat(y);
+                this.z = parseFloat(z);
+            }
+
+            toIntTuple() {
+                return [Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)];
+            }
+
+            add(other) {
+                if (other instanceof Vector) {
+                    return new Vector(this.x + other.x, this.y + other.y, this.z + other.z);
+                } else {
+                    return new Vector(this.x + other, this.y + other, this.z + other);
+                }
+            }
+
+            sub(other) {
+                if (other instanceof Vector) {
+                    return new Vector(this.x - other.x, this.y - other.y, this.z - other.z);
+                } else {
+                    return new Vector(this.x - other, this.y - other, this.z - other);
+                }
+            }
+
+            mul(scalar) {
+                return new Vector(this.x * scalar, this.y * scalar, this.z * scalar);
+            }
+
+            div(scalar) {
+                return new Vector(this.x / scalar, this.y / scalar, this.z / scalar);
+            }
+
+            neg() {
+                return new Vector(-this.x, -this.y, -this.z);
+            }
+
+            cross(other) {
+                return new Vector(
+                    this.y * other.z - this.z * other.y,
+                    this.z * other.x - this.x * other.z,
+                    this.x * other.y - this.y * other.x
+                );
+            }
+
+            dot(other) {
+                return this.x * other.x + this.y * other.y + this.z * other.z;
+            }
+
+            toString() {
+                return `(${this.x.toFixed(2)}, ${this.y.toFixed(2)}, ${this.z.toFixed(2)})`;
+            }
+
+            * [Symbol.iterator]() {
+                yield this.x;
+                yield this.y;
+                yield this.z;
+            }
+        }
+
+        class Entity {
+            constructor(name, pos, eyeHeight) {
+                this.name = name;
+                this.pos = pos;
+                this.eyeHeight = eyeHeight;
+                this.selectedItem = null;
+                this.inventory = [];
+            }
+
+            getBlock() {
+                return {name: 'stone', type: 'block'};
+            }
+
+            toString() {
+                return this.name;
+            }
+        }
+
+        class World {
+            constructor() {
+                this.blocks = {};
+            }
+
+            addBlock(pos, block) {
+                const key = pos.join(',');
+                if (this.blocks[key]) {
+                    consoleLog(`[Accident] 本应在位置(${pos.join(', ')})处接受一个可放置方块的地方，而实际接受了${block.name}`, 'error');
+                    return false;
+                }
+                this.blocks[key] = block;
+                consoleLog(`place_block: 已在位置(${pos.join(', ')})处放置方块${block.name}`, 'success');
+                return true;
+            }
+
+            removeBlock(pos) {
+                const key = pos.join(',');
+                if (this.blocks[key]) {
+                    delete this.blocks[key];
+                    consoleLog(`break_block: 已移除位置(${pos.join(', ')})处的方块`, 'success');
+                } else {
+                    consoleLog(`break_block: 位置(${pos.join(', ')})处没有方块`, 'info');
+                }
+            }
+        }
+
+        class MindStack {
+            constructor(caster, world) {
+                this.stack = [];
+                this.caster = caster;
+                this.world = world;
+                this.local = null;
+                this.introspect = [];
+                this.introspectLevel = 0;
+            }
+
+            formatValue(val) {
+                if (val === null || val === undefined) return 'null';
+                if (typeof val === 'boolean') return val ? 'True' : 'False';
+                if (typeof val === 'number') {
+                    if (Number.isInteger(val)) return val.toString();
+                    return val.toFixed(4);
+                }
+                if (val instanceof Vector) return val.toString();
+                if (val instanceof Entity) return val.name;
+                if (Array.isArray(val)) {
+                    return '[' + val.map(v => this.formatValue(v)).join(', ') + ']';
+                }
+                if (typeof val === 'object' && val.type === 'block') return val.name;
+                return String(val);
+            }
+
+            push(...items) {
+                // Display push
+                let displayStr;
+                if (this.stack.length > 20) {
+                    const visible = this.stack.slice(-20);
+                    displayStr = `[...(${this.stack.length - 20} more), ${visible.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
+                } else {
+                    displayStr = `[${this.stack.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
+                }
+                if (displayStr.length > 100) {
+                    displayStr = displayStr.slice(0, 50) + '...' + displayStr.slice(-50);
+                }
+                consoleLog(displayStr, 'output');
+
+                this.stack.push(...items);
+                updateStackDisplay(this);
+            }
+
+            pop(...types) {
+                const count = types.length;
+                if (this.stack.length >= count) {
+                    const removed = this.stack.splice(-count, count);
+                    // Type checking (simplified)
+                    for (let i = 0; i < types.length; i++) {
+                        const val = removed[i];
+                        const type = types[i];
+                        // Skip type check for 'object' type
+                        if (type === Object) continue;
+                        if (type === Number && typeof val !== 'number') {
+                            consoleLog(`[Accident] 本应在栈下标为${count - 1 - i}处接受一个Number，而实际接受了${typeof val}`, 'error');
+                            throw new Error('TypeAccident');
+                        }
+                        if (type === Vector && !(val instanceof Vector)) {
+                            consoleLog(`[Accident] 本应在栈下标为${count - 1 - i}处接受一个Vector，而实际接受了${typeof val}`, 'error');
+                            throw new Error('TypeAccident');
+                        }
+                        if (type === Boolean && typeof val !== 'boolean') {
+                            consoleLog(`[Accident] 本应在栈下标为${count - 1 - i}处接受一个Boolean，而实际接受了${typeof val}`, 'error');
+                            throw new Error('TypeAccident');
+                        }
+                    }
+                    consoleLog(`~ [${removed.map(v => this.formatValue(v)).join(', ')}]`, 'info');
+                    return removed;
+                }
+                consoleLog(`[Accident] 本应接受大于等于${count}个参数，而实际栈中元素数为${this.stack.length}`, 'error');
+                throw new Error('IndexAccident');
+            }
+
+            setLocal(local) {
+                this.local = local;
+                consoleLog(`local: ${this.formatValue(this.local)}`, 'success');
+                updateVarDisplay(this);
+            }
+
+            runCommand(command) {
+                try {
+                    if (this.introspectLevel > 0 && command !== '(' && command !== ')') {
+                        this.introspect.push(command);
+                    } else {
+                        switch (command) {
+                            case '/stack':
+                                consoleLog(this.stack.map(v => this.formatValue(v)).join(', '), 'output');
+                                break;
+                            case '/clear':
+                                this.stack = [];
+                                consoleLog('已清空栈', 'success');
+                                updateStackDisplay(this);
+                                break;
+                            case '/local':
+                                consoleLog(`local: ${this.formatValue(this.local)}`, 'output');
+                                break;
+                            case 'print': {
+                                const value = this.pop(Object)[0];
+                                consoleLog(`[print] ${this.formatValue(value)}`, 'output');
+                                this.push(value);
+                                break;
+                            }
+                            case 'get_caster':
+                                this.push(this.caster);
+                                break;
+                            case 'entity_pos/eye': {
+                                const entity = this.pop(Entity)[0];
+                                this.push(entity.pos.add(new Vector(0, entity.eyeHeight, 0)));
+                                break;
+                            }
+                            case 'entity_pos/foot': {
+                                const entity = this.pop(Entity)[0];
+                                this.push(entity.pos);
+                                break;
+                            }
+                            case 'const/true':
+                                this.push(true);
+                                break;
+                            case 'const/false':
+                                this.push(false);
+                                break;
+                            case 'const/double/tau':
+                                this.push(Math.PI * 2);
+                                break;
+                            case 'const/double/pi':
+                                this.push(Math.PI);
+                                break;
+                            case 'read/local':
+                                this.push(this.local);
+                                break;
+                            case 'write/local': {
+                                const val = this.pop(Object)[0];
+                                this.setLocal(val);
+                                break;
+                            }
+                            case 'duplicate': {
+                                const val = this.pop(Object)[0];
+                                this.push(val, val);
+                                break;
+                            }
+                            case 'over': {
+                                const [a, b] = this.pop(Object, Object);
+                                this.push(a, b, a);
+                                break;
+                            }
+                            case 'swap': {
+                                const [a, b] = this.pop(Object, Object);
+                                this.push(b, a);
+                                break;
+                            }
+                            case 'construct_vec': {
+                                const [x, y, z] = this.pop(Number, Number, Number);
+                                this.push(new Vector(x, y, z));
+                                break;
+                            }
+                            case 'div_cross': {
+                                const [a, b] = this.pop(Object, Object);
+                                if (b === 0 || b instanceof Vector) {
+                                    consoleLog(`[Accident] 试图用${this.formatValue(b)}除${this.formatValue(a)}`, 'error');
+                                    throw new Error('DivisionAccident');
+                                }
+                                if (typeof a === 'number' && typeof b === 'number') {
+                                    this.push(a / b);
+                                } else if (a instanceof Vector && typeof b === 'number') {
+                                    this.push(a.div(b));
+                                } else if (a instanceof Vector && b instanceof Vector) {
+                                    this.push(a.cross(b));
+                                } else {
+                                    this.push(a / b);
+                                }
+                                break;
+                            }
+                            case 'mul_dot': {
+                                const [a, b] = this.pop(Object, Object);
+                                if (typeof a === 'number' && typeof b === 'number') {
+                                    this.push(a * b);
+                                } else if (a instanceof Vector && typeof b === 'number') {
+                                    this.push(a.mul(b));
+                                } else if (typeof a === 'number' && b instanceof Vector) {
+                                    this.push(b.mul(a));
+                                } else if (a instanceof Vector && b instanceof Vector) {
+                                    this.push(a.dot(b));
+                                } else {
+                                    this.push(a * b);
+                                }
+                                break;
+                            }
+                            case 'sub': {
+                                const [a, b] = this.pop(Object, Object);
+                                if (typeof a === 'number' && typeof b === 'number') {
+                                    this.push(a - b);
+                                } else if (a instanceof Vector && typeof b === 'number') {
+                                    this.push(a.sub(b));
+                                } else if (typeof a === 'number' && b instanceof Vector) {
+                                    this.push(new Vector(a, a, a).sub(b));
+                                } else if (a instanceof Vector && b instanceof Vector) {
+                                    this.push(a.sub(b));
+                                } else {
+                                    this.push(a - b);
+                                }
+                                break;
+                            }
+                            case 'add': {
+                                const [a, b] = this.pop(Object, Object);
+                                if (typeof a === 'number' && typeof b === 'number') {
+                                    this.push(a + b);
+                                } else if (a instanceof Vector && typeof b === 'number') {
+                                    this.push(a.add(b));
+                                } else if (typeof a === 'number' && b instanceof Vector) {
+                                    this.push(b.add(a));
+                                } else if (a instanceof Vector && b instanceof Vector) {
+                                    this.push(a.add(b));
+                                } else {
+                                    this.push(a + b);
+                                }
+                                break;
+                            }
+                            case 'less': {
+                                const [a, b] = this.pop(Number, Number);
+                                this.push(a < b);
+                                break;
+                            }
+                            case 'greater': {
+                                const [a, b] = this.pop(Number, Number);
+                                this.push(a > b);
+                                break;
+                            }
+                            case 'cos': {
+                                const val = this.pop(Number)[0];
+                                this.push(Math.cos(val));
+                                break;
+                            }
+                            case 'sin': {
+                                const val = this.pop(Number)[0];
+                                this.push(Math.sin(val));
+                                break;
+                            }
+                            case 'tan': {
+                                const val = this.pop(Number)[0];
+                                this.push(Math.tan(val));
+                                break;
+                            }
+                            case 'break_block': {
+                                const pos = this.pop(Vector)[0];
+                                this.world.removeBlock(pos.toIntTuple());
+                                break;
+                            }
+                            case 'place_block': {
+                                const pos = this.pop(Vector)[0];
+                                const block = this.caster.getBlock();
+                                this.world.addBlock(pos.toIntTuple(), block);
+                                break;
+                            }
+                            case 'if': {
+                                const [condition, thenVal, elseVal] = this.pop(Boolean, Object, Object);
+                                if (condition) {
+                                    this.push(thenVal);
+                                } else {
+                                    this.push(elseVal);
+                                }
+                                break;
+                            }
+                            case '(':
+                                if (this.introspectLevel > 0) {
+                                    this.introspect.push(command);
+                                }
+                                this.introspectLevel++;
+                                break;
+                            case ')':
+                                if (this.introspectLevel === 0) {
+                                    consoleLog('[Accident] 在绘制反思前未先绘制内省', 'error');
+                                    throw new Error('IntrospectAccident');
+                                } else if (this.introspectLevel === 1) {
+                                    this.push(this.introspect);
+                                    this.introspect = [];
+                                    this.introspectLevel--;
+                                } else {
+                                    this.introspect.push(command);
+                                    this.introspectLevel--;
+                                }
+                                break;
+                            case 'eval': {
+                                const toEval = this.pop(Object)[0];
+                                let list = [];
+                                if (typeof toEval === 'string') {
+                                    list = [toEval];
+                                } else if (Array.isArray(toEval)) {
+                                    list = toEval;
+                                }
+                                for (const cmd of list) {
+                                    const indent = '    '.repeat(this.introspectLevel);
+                                    consoleLog(`${indent}eval> ${cmd}`, 'input');
+                                    const result = this.runCommand(cmd);
+                                    if (result === 'accident') {
+                                        throw new Error('EvalAccident');
+                                    }
+                                }
+                                break;
+                            }
+                            case 'halt':
+                                return 'halt';
+                            default:
+                                // num_xxx pattern
+                                if (command.startsWith('num_')) {
+                                    const num = parseFloat(command.slice(4));
+                                    this.push(num);
+                                }
+                                // mask_xxx pattern
+                                else if (command.startsWith('mask_')) {
+                                    const maskStr = command.slice(5);
+                                    const elements = this.pop(...Array(maskStr.length).fill(Object));
+                                    const result = [];
+                                    for (let i = 0; i < maskStr.length; i++) {
+                                        if (maskStr[i] === '-') {
+                                            result.push(elements[i]);
+                                        }
+                                    }
+                                    this.push(...result);
+                                } else {
+                                    consoleLog(`[Accident] 未知符号：${command}`, 'error');
+                                    throw new Error('NameAccident');
+                                }
+                        }
+                    }
+                } catch (e) {
+                    if (e.message === 'IndexAccident' || e.message === 'TypeAccident' ||
+                        e.message === 'NameAccident' || e.message === 'IntrospectAccident' ||
+                        e.message === 'DivisionAccident') {
+                        return 'accident';
+                    }
+                    throw e;
+                }
+                return 'success';
+            }
+
+            runProgram(text) {
+                const commands = splitCommand(text);
+                for (const cmd of commands) {
+                    const indent = '    '.repeat(this.introspectLevel);
+                    consoleLog(`${indent}run_program> ${cmd}`, 'input');
+                    const result = this.runCommand(cmd);
+                    if (result !== 'success') {
+                        if (result === 'halt') break;
+                        return 'accident';
+                    }
+                }
+                return 'success';
+            }
+        }
+
+        function splitCommand(text) {
+            const pattern = /[^\s,()]+|\(|\)/g;
+            return text.match(pattern) || [];
+        }
+
+        // ===== UI Update Functions =====
+        function updateStackDisplay(mind) {
+            const count = mind.stack.length;
+            stackCount.textContent = count;
+
+            if (count === 0) {
+                stackContainer.innerHTML = '<div class="empty-state">栈为空</div>';
+                return;
+            }
+
             let html = '';
             for (let i = count - 1; i >= 0; i--) {
-                const val = randomHex();
-                const isHighlight = i === 2 || i === 0;
-                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val">${isHighlight ? '<span class="highlight">' + val + '</span>' : val}</span></div>`;
+                const val = mind.stack[i];
+                const isList = Array.isArray(val);
+                const formatted = mind.formatValue(val);
+                const isTop = i === count - 1;
+                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val ${isList ? 'list' : ''}">${isTop ? '<span class="highlight">' + formatted + '</span>' : formatted}</span></div>`;
             }
             stackContainer.innerHTML = html;
-            stackCount.textContent = count;
+        }
+
+        function updateVarDisplay(mind) {
+            if (mind.local === null || mind.local === undefined) {
+                varContainer.innerHTML = '<div class="empty-state">未设置</div>';
+                varCount.textContent = '0';
+                return;
+            }
+
+            const isList = Array.isArray(mind.local);
+            const formatted = mind.formatValue(mind.local);
+            const type = isList ? 'list' : (typeof mind.local === 'number' ? 'number' : typeof mind.local);
+
+            varContainer.innerHTML = `<div class="var-item"><span class="var-name">local</span><span class="var-value ${isList ? 'list' : ''}">${formatted}</span><span class="var-type">${type}</span></div>`;
+            varCount.textContent = '1';
         }
 
         // ===== Toast =====
@@ -1237,9 +1756,128 @@
             }, 2800);
         }
 
-        // ===== Simulate execution =====
+        // ===== Code Highlight & Render =====
+        function highlightLine(line) {
+            let s = line;
+            // comments
+            s = s.replace(/(\/\/.*)$/, '<span class="comment">$1</span>');
+            // strings
+            s = s.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+            // numbers (hex)
+            s = s.replace(/\b(0x[0-9A-Fa-f]+)\b/g, '<span class="number">$1</span>');
+            // numbers (decimal)
+            s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+            // keywords/commands
+            const kw = ['add', 'sub', 'mul_dot', 'div_cross', 'swap', 'duplicate', 'over',
+                'print', 'eval', 'if', 'halt', 'construct_vec', 'sin', 'cos', 'tan',
+                'less', 'greater', 'place_block', 'break_block', 'read/local', 'write/local',
+                'get_caster', 'entity_pos/eye', 'entity_pos/foot'
+            ];
+            const kwRegex = new RegExp('\\b(' + kw.join('|') + ')\\b', 'g');
+            s = s.replace(kwRegex, '<span class="keyword">$1</span>');
+            // consts
+            const consts = ['const/true', 'const/false', 'const/double/tau', 'const/double/pi'];
+            const constRegex = new RegExp('\\b(' + consts.join('|') + ')\\b', 'g');
+            s = s.replace(constRegex, '<span class="function">$1</span>');
+            // num_ prefix
+            s = s.replace(/\b(num_\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+            return s;
+        }
+
+        function renderCode(code) {
+            const lines = code.split('\n');
+            let codeHtml = '';
+            let numHtml = '';
+            lines.forEach((line, idx) => {
+                const num = idx + 1;
+                numHtml += `<span>${num}</span>`;
+                const highlighted = line.trim() === '' ? '&nbsp;' : highlightLine(line);
+                codeHtml += `<span class="line" data-line="${num}">${highlighted}</span>`;
+            });
+            lineNumbersEl.innerHTML = numHtml;
+            codeLinesEl.innerHTML = codeHtml;
+        }
+
+        // ===== Execution State =====
+        let mindStack = null;
+        let programCommands = [];
+        let currentCmdIndex = 0;
         let isRunning = false;
         let intervalId = null;
+
+        function initInterpreter() {
+            const caster = new Entity('caster', new Vector(0, 0, 0), 1.8);
+            const world = new World();
+            mindStack = new MindStack(caster, world);
+            updateStackDisplay(mindStack);
+            updateVarDisplay(mindStack);
+        }
+
+        function resetAll() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            isRunning = false;
+            currentCmdIndex = 0;
+            programCommands = [];
+
+            btnRun.innerHTML =
+                `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+            btnRun.className = 'btn btn-success';
+
+            initInterpreter();
+            consoleClearFn();
+            consoleLog('// 解释器已重置', 'info');
+            statusText.textContent = '等待输入';
+
+            const lines = codeLinesEl.querySelectorAll('.line');
+            lines.forEach(l => l.classList.remove('active-line'));
+            showToast('🔄 已重置', 'success');
+        }
+
+        function loadProgram() {
+            const code = codeLinesEl.value;
+            programCommands = splitCommand(code);
+            currentCmdIndex = 0;
+            consoleLog(`// 加载完成，共 ${programCommands.length} 条命令`, 'info');
+        }
+
+        function stepOnce() {
+            if (!mindStack) initInterpreter();
+
+            if (programCommands.length === 0) {
+                loadProgram();
+            }
+
+            if (currentCmdIndex >= programCommands.length) {
+                showToast('⚠️ 程序已执行完毕', 'warning');
+                return false;
+            }
+
+            const cmd = programCommands[currentCmdIndex];
+            statusText.textContent = `执行: ${cmd}`;
+
+            // Highlight current line (simplified)
+            const lines = codeLinesEl.querySelectorAll('.line');
+            lines.forEach(l => l.classList.remove('active-line'));
+
+            const result = mindStack.runCommand(cmd);
+            currentCmdIndex++;
+
+            if (result === 'halt') {
+                consoleLog('// 程序已暂停 (halt)', 'info');
+                statusText.textContent = '已暂停';
+                return false;
+            }
+            if (result === 'accident') {
+                consoleLog('// 执行出错', 'error');
+                statusText.textContent = '执行出错';
+                return false;
+            }
+
+            return true;
+        }
 
         function toggleRun() {
             if (isRunning) {
@@ -1253,10 +1891,14 @@
                     `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
                 btnRun.className = 'btn btn-success';
                 showToast('⏸️ 已暂停', 'warning');
+                statusText.textContent = '已暂停';
                 return;
             }
 
             // Start
+            if (!mindStack) initInterpreter();
+            if (programCommands.length === 0) loadProgram();
+
             isRunning = true;
             btnRun.innerHTML =
                 `<svg viewBox="0 0 24 24" width="18" height="18"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> 暂停`;
@@ -1264,126 +1906,50 @@
             showToast('▶️ 执行中…', 'info');
 
             const speed = parseInt(speedSlider.value);
-            const delay = Math.max(100, 1200 - speed * 100);
+            const delay = Math.max(50, 800 - speed * 70);
 
-            let step = 0;
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(() => {
-                step++;
-                // Update pattern — animate a few cells
-                const cells = patternGrid.querySelectorAll('.pattern-cell');
-                const activeCount = 8 + Math.floor(Math.random() * 16);
-                // reset all
-                cells.forEach(c => {
-                    c.className = 'pattern-cell';
-                });
-                // activate random
-                const indices = [];
-                while (indices.length < activeCount) {
-                    const idx = Math.floor(Math.random() * cells.length);
-                    if (!indices.includes(idx)) indices.push(idx);
-                }
-                const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
-                indices.forEach((idx, i) => {
-                    const cls = colors[i % colors.length];
-                    cells[idx].classList.add(cls);
-                });
-
-                // Update variables & stack every few steps
-                if (step % 3 === 0) updateVariables();
-                if (step % 2 === 0) updateStack();
-
-                // Highlight a random code line
-                const lines = codeLinesEl.querySelectorAll('.line');
-                lines.forEach(l => l.classList.remove('active-line'));
-                if (lines.length > 0) {
-                    const rand = Math.floor(Math.random() * lines.length);
-                    lines[rand].classList.add('active-line');
-                }
-
-                // Show a toast occasionally
-                if (step % 8 === 0) {
-                    const msgs = ['⏳ 执行指令', '📊 更新内存', '🔄 栈帧切换', '🎯 命中断点', '📈 性能采样'];
-                    showToast(msgs[Math.floor(Math.random() * msgs.length)], 'info');
-                }
-
-                if (step > 60) {
-                    // auto-stop after a while
+                const cont = stepOnce();
+                if (!cont) {
                     clearInterval(intervalId);
                     intervalId = null;
                     isRunning = false;
                     btnRun.innerHTML =
                         `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
                     btnRun.className = 'btn btn-success';
-                    showToast('⏹️ 执行完成', 'success');
+                    if (currentCmdIndex >= programCommands.length) {
+                        showToast('⏹️ 执行完成', 'success');
+                        statusText.textContent = '执行完成';
+                    }
                 }
             }, delay);
         }
 
-        function stepOnce() {
-            if (isRunning) {
-                showToast('⚠️ 请先暂停再单步', 'warning');
-                return;
+        function runAll() {
+            if (!mindStack) initInterpreter();
+
+            const code = codeLinesEl.value;
+            consoleLog('// 开始执行完整程序', 'info');
+            statusText.textContent = '执行中...';
+
+            const result = mindStack.runProgram(code);
+
+            if (result === 'success') {
+                showToast('✅ 执行完成', 'success');
+                statusText.textContent = '执行完成';
+            } else {
+                showToast('❌ 执行出错', 'error');
+                statusText.textContent = '执行出错';
             }
-            // Animate one step
-            const cells = patternGrid.querySelectorAll('.pattern-cell');
-            const idx = Math.floor(Math.random() * cells.length);
-            cells.forEach(c => c.className = 'pattern-cell');
-            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
-            cells[idx].classList.add(colors[Math.floor(Math.random() * colors.length)]);
-            // update vars/stack
-            updateVariables();
-            updateStack();
-            // highlight line
-            const lines = codeLinesEl.querySelectorAll('.line');
-            lines.forEach(l => l.classList.remove('active-line'));
-            if (lines.length > 0) {
-                const rand = Math.floor(Math.random() * lines.length);
-                lines[rand].classList.add('active-line');
-            }
-            showToast('⏭️ 单步执行', 'info');
-        }
-
-        function resetAll() {
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-            }
-            isRunning = false;
-            btnRun.innerHTML =
-                `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
-            btnRun.className = 'btn btn-success';
-
-            // Reset pattern
-            const cells = patternGrid.querySelectorAll('.pattern-cell');
-            cells.forEach(c => c.className = 'pattern-cell');
-            // Add some default pattern
-            const defaultPattern = [2, 5, 8, 13, 17, 21, 25, 30, 34, 38, 42, 47, 51, 55, 60, 64, 68, 72, 77, 81, 85, 90,
-                94, 98, 103, 107, 111, 116, 120
-            ];
-            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
-            defaultPattern.forEach((idx, i) => {
-                if (idx < cells.length) {
-                    cells[idx].classList.add(colors[i % colors.length]);
-                }
-            });
-
-            updateVariables();
-            updateStack();
-            const lines = codeLinesEl.querySelectorAll('.line');
-            lines.forEach(l => l.classList.remove('active-line'));
-            showToast('🔄 已重置', 'success');
-        }
-
-        // ===== Compile =====
-        function compileCode() {
-            showToast('🔨 编译成功 · 无错误', 'success');
         }
 
         // ===== Switch sample =====
         function loadSample(name) {
-            const code = samples[name] || samples.hexdump;
-            renderCode(code);
+            const code = samples[name] || samples.basic;
+            codeLinesEl.value = code.trim();
+            renderCode(code.trim());
+
             // Reset execution state
             if (intervalId) {
                 clearInterval(intervalId);
@@ -1393,29 +1959,26 @@
                     `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
                 btnRun.className = 'btn btn-success';
             }
-            // Reset pattern
-            const cells = patternGrid.querySelectorAll('.pattern-cell');
-            cells.forEach(c => c.className = 'pattern-cell');
-            // Add a default pattern
-            const defaultPattern = [2, 5, 8, 13, 17, 21, 25, 30, 34, 38, 42, 47, 51, 55, 60, 64, 68, 72, 77, 81, 85, 90,
-                94, 98, 103, 107, 111, 116, 120
-            ];
-            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
-            defaultPattern.forEach((idx, i) => {
-                if (idx < cells.length) {
-                    cells[idx].classList.add(colors[i % colors.length]);
-                }
-            });
-            updateVariables();
-            updateStack();
-            const lines = codeLinesEl.querySelectorAll('.line');
-            lines.forEach(l => l.classList.remove('active-line'));
+
+            programCommands = [];
+            currentCmdIndex = 0;
+            initInterpreter();
+            consoleClearFn();
+            consoleLog(`// 已加载示例: ${exampleSelect.options[exampleSelect.selectedIndex].text}`, 'info');
+            statusText.textContent = '等待输入';
             showToast(`📂 已加载: ${exampleSelect.options[exampleSelect.selectedIndex].text}`, 'info');
         }
 
         // ===== Event Listeners =====
         btnRun.addEventListener('click', toggleRun);
-        btnStep.addEventListener('click', stepOnce);
+        btnStep.addEventListener('click', () => {
+            if (isRunning) {
+                showToast('⚠️ 请先暂停再单步', 'warning');
+                return;
+            }
+            stepOnce();
+            showToast('⏭️ 单步执行', 'info');
+        });
         btnPause.addEventListener('click', () => {
             if (isRunning) {
                 toggleRun();
@@ -1424,7 +1987,7 @@
             }
         });
         btnReset.addEventListener('click', resetAll);
-        btnCompile.addEventListener('click', compileCode);
+        btnCompile.addEventListener('click', runAll);
 
         exampleSelect.addEventListener('change', function () {
             loadSample(this.value);
@@ -1433,7 +1996,6 @@
         speedSlider.addEventListener('input', function () {
             speedValue.textContent = this.value;
             if (isRunning) {
-                // restart with new speed
                 const wasRunning = isRunning;
                 if (intervalId) {
                     clearInterval(intervalId);
@@ -1446,34 +2008,19 @@
             }
         });
 
-        // Click on code line -> set breakpoint (toggle)
-        codeLinesEl.addEventListener('click', function (e) {
-            const line = e.target.closest('.line');
-            if (line) {
-                line.classList.toggle('breakpoint');
-                const num = line.dataset.line;
-                if (line.classList.contains('breakpoint')) {
-                    showToast(`🔴 断点已设置: 第 ${num} 行`, 'warning');
-                } else {
-                    showToast(`⚪ 断点已移除: 第 ${num} 行`, 'info');
-                }
-            }
+        // Update code highlighting on input
+        codeLinesEl.addEventListener('input', function () {
+            renderCode(this.value);
+            // Reset program state
+            programCommands = [];
+            currentCmdIndex = 0;
         });
 
         // ===== Init =====
         function init() {
             // Load default sample
-            renderCode(samples.hexdump);
-            renderPattern();
-            updateVariables();
-            updateStack();
-            // Add some active lines initially
-            const lines = codeLinesEl.querySelectorAll('.line');
-            if (lines.length > 3) {
-                lines[3].classList.add('active-line');
-                lines[7].classList.add('active-line');
-            }
-            showToast('🚀 HexParse 已就绪', 'success');
+            loadSample('circle');
+            showToast('🚀 HexParse 解释器已就绪', 'success');
         }
 
         init();
@@ -1485,20 +2032,7 @@
                 toggleRun();
             } else if (e.key === 'F10') {
                 e.preventDefault();
-                stepOnce();
-            } else if (e.key === 'F9') {
-                e.preventDefault();
-                // toggle breakpoint on current line — find active line
-                const active = codeLinesEl.querySelector('.line.active-line');
-                if (active) {
-                    active.classList.toggle('breakpoint');
-                    const num = active.dataset.line;
-                    if (active.classList.contains('breakpoint')) {
-                        showToast(`🔴 断点已设置: 第 ${num} 行`, 'warning');
-                    } else {
-                        showToast(`⚪ 断点已移除: 第 ${num} 行`, 'info');
-                    }
-                }
+                if (!isRunning) stepOnce();
             } else if (e.key === 'Escape') {
                 if (intervalId) {
                     clearInterval(intervalId);
@@ -1508,20 +2042,20 @@
                         `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
                     btnRun.className = 'btn btn-success';
                     showToast('⏹️ 已强制停止', 'error');
+                    statusText.textContent = '已停止';
                 }
             }
         });
 
-        // Expose some functions to console for fun
+        // Expose to console
         window.__hexparse = {
             loadSample,
             resetAll,
             toggleRun,
             stepOnce,
+            runAll,
             showToast,
-            renderCode,
-            updateVariables,
-            updateStack
+            getMind: () => mindStack
         };
 
     })();
