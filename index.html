@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>HexParse Interpreter</title>
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            --bg-primary: #0b0e17;
+            --bg-secondary: #131926;
+            --bg-panel: #192132;
+            --bg-card: #1f2a3f;
+            --bg-hover: #2a3855;
+            --border-color: #2d3d5e;
+            --border-light: #3d5278;
+            --text-primary: #e8edf5;
+            --text-secondary: #8ba0c7;
+            --text-muted: #5a6f94;
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.25);
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ===== Reset & Base ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            padding: 24px 32px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
+        /* ===== Page Title ===== */
+        .page-header {
+            width: 100%;
+            max-width: 1600px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding: 0 4px;
+        }
+
+        .page-title-group {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .page-title {
+            font-size: 34px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #e8edf5 0%, #8ba0c7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-badge {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.3px;
+            -webkit-text-fill-color: var(--accent-blue);
+        }
+
+        .page-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(0.85);
+            }
+        }
+
+        /* ===== Main Layout ===== */
+        .main-wrap {
+            display: flex;
+            gap: 24px;
+            width: 100%;
+            max-width: 1600px;
+            min-height: 680px;
+        }
+
+        /* ===== Left Panel ===== */
+        .left-code-panel {
+            flex: 1;
+            min-width: 0;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            transition: border-color var(--transition);
+        }
+
+        .left-code-panel:hover {
+            border-color: var(--border-light);
+        }
+
+        /* ---- Toolbar ---- */
+        .toolbar-bar {
+            background: var(--bg-panel);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border-color);
+            min-height: 64px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 32px;
+            background: var(--border-color);
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: all var(--transition);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            height: 36px;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0px) scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: #fff;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+            color: #fff;
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: #fff;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.12);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.25);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: #fff;
+            border-color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+        }
+
+        .btn-amber {
+            background: var(--accent-amber);
+            color: #0b0e17;
+            border-color: var(--accent-amber);
+        }
+
+        .btn-amber:hover {
+            background: #d97706;
+            border-color: #d97706;
+            color: #0b0e17;
+        }
+
+        .btn-icon {
+            width: 36px;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .btn-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ---- Select ---- */
+        .toolbar-select {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 6px 32px 6px 14px;
+            font-size: 13px;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            height: 36px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238ba0c7' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            transition: border-color var(--transition);
+            min-width: 140px;
+        }
+
+        .toolbar-select:hover {
+            border-color: var(--border-light);
+        }
+
+        .toolbar-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        /* ---- Slider ---- */
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-wrapper label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .slider-wrapper input[type="range"] {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--border-color);
+            border-radius: 4px;
+            outline: none;
+            transition: background var(--transition);
+        }
+
+        .slider-wrapper input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            box-shadow: 0 0 16px rgba(59, 130, 246, 0.3);
+            transition: all var(--transition);
+        }
+
+        .slider-wrapper input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .slider-wrapper input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 32px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+        }
+
+        /* ---- Code Content ---- */
+        .code-content {
+            flex: 1;
+            padding: 20px 0 20px 0;
+            overflow: auto;
+            background: var(--bg-secondary);
+            position: relative;
+            display: flex;
+        }
+
+        .code-editor {
+            display: flex;
+            width: 100%;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .line-numbers {
+            padding: 0 16px 0 20px;
+            text-align: right;
+            color: var(--text-muted);
+            user-select: none;
+            border-right: 1px solid var(--border-color);
+            min-width: 48px;
+            flex-shrink: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .line-numbers span {
+            display: block;
+            height: 23.8px;
+            /* match line-height */;
+        }
+
+        .code-lines {
+            padding: 0 20px 0 18px;
+            flex: 1;
+            white-space: nowrap;
+            word-break: break-all;
+            color: var(--text-primary);
+            position: relative;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-size: 14px;
+            line-height: 1.7;
+            font-family: var(--font-mono);
+            outline: none;
+        }
+
+        .code-lines .line {
+            display: block;
+            height: 23.8px;
+            transition: background var(--transition);
+            border-radius: 2px;
+            padding: 0 4px;
+            margin: 0 -4px;
+        }
+
+        .code-lines .line:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .code-lines .line.breakpoint {
+            background: rgba(239, 68, 68, 0.12);
+            border-left: 3px solid var(--accent-red);
+            padding-left: 1px;
+        }
+
+        .code-lines .line.active-line {
+            background: rgba(59, 130, 246, 0.10);
+            border-left: 3px solid var(--accent-blue);
+            padding-left: 1px;
+        }
+
+        .code-lines .keyword {
+            color: var(--accent-purple);
+        }
+
+        .code-lines .string {
+            color: var(--accent-green);
+        }
+
+        .code-lines .comment {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .code-lines .number {
+            color: var(--accent-amber);
+        }
+
+        .code-lines .function {
+            color: var(--accent-blue);
+        }
+
+        .code-lines .operator {
+            color: var(--accent-red);
+        }
+
+        /* ===== Right Panel ===== */
+        .right-pattern-panel {
+            flex: 1.6;
+            min-width: 0;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: var(--shadow);
+            transition: border-color var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .right-pattern-panel:hover {
+            border-color: var(--border-light);
+        }
+
+        /* ---- Panel Grid ---- */
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .info-card {
+            background: var(--bg-panel);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            padding: 16px 18px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: border-color var(--transition);
+        }
+
+        .info-card:hover {
+            border-color: var(--border-light);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        .info-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-secondary);
+        }
+
+        .info-card-badge {
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .info-card-body {
+            flex: 1;
+            overflow: auto;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ---- Stack / Variables ---- */
+        .var-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(45, 61, 94, 0.3);
+        }
+
+        .var-item:last-child {
+            border-bottom: none;
+        }
+
+        .var-name {
+            color: var(--accent-purple);
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .var-value {
+            color: var(--text-primary);
+        }
+
+        .var-type {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-left: auto;
+            background: var(--bg-card);
+            padding: 0 10px;
+            border-radius: 10px;
+        }
+
+        .stack-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(45, 61, 94, 0.2);
+            font-size: 14px;
+        }
+
+        .stack-item:last-child {
+            border-bottom: none;
+        }
+
+        .stack-idx {
+            color: var(--text-muted);
+            font-size: 12px;
+            min-width: 28px;
+        }
+
+        .stack-val {
+            color: var(--text-primary);
+        }
+
+        .stack-val .highlight {
+            color: var(--accent-amber);
+        }
+
+        /* ---- Pattern Output ---- */
+        .pattern-output {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            min-height: 120px;
+            position: relative;
+            overflow: hidden;
+            border: 1px dashed var(--border-color);
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 3px;
+            width: 100%;
+            padding: 12px;
+            max-height: 160px;
+            overflow: auto;
+        }
+
+        .pattern-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: var(--bg-card);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid var(--border-color);
+            min-width: 12px;
+            min-height: 12px;
+        }
+
+        .pattern-cell.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            transform: scale(1.05);
+        }
+
+        .pattern-cell.active-alt {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+            transform: scale(1.05);
+        }
+
+        .pattern-cell.active-green {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+            transform: scale(1.05);
+        }
+
+        .pattern-cell.active-amber {
+            background: var(--accent-amber);
+            border-color: var(--accent-amber);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+            transform: scale(1.05);
+        }
+
+        /* ---- Empty state ---- */
+        .empty-state {
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* ===== Toast / Notification ===== */
+        .toast-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 14px 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            pointer-events: auto;
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(12px);
+            background: rgba(25, 33, 50, 0.92);
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .toast.success {
+            border-left-color: var(--accent-green);
+        }
+
+        .toast.error {
+            border-left-color: var(--accent-red);
+        }
+
+        .toast.warning {
+            border-left-color: var(--accent-amber);
+        }
+
+        .toast-icon {
+            font-size: 20px;
+        }
+
+        @keyframes slideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1100px) {
+            .main-wrap {
+                flex-direction: column;
+            }
+
+            .right-pattern-panel {
+                min-height: 480px;
+            }
+
+            .info-row {
+                flex-direction: column;
+            }
+
+            .page-title {
+                font-size: 28px;
+            }
+
+            body {
+                padding: 16px 16px 32px;
+            }
+
+            .toolbar-bar {
+                padding: 10px 14px;
+                gap: 6px;
+            }
+
+            .toolbar-divider {
+                margin: 0 4px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 5px 12px;
+                height: 32px;
+            }
+
+            .btn-icon {
+                width: 32px;
+                padding: 0;
+            }
+
+            .toolbar-select {
+                min-width: 100px;
+                font-size: 12px;
+                height: 32px;
+                padding: 4px 28px 4px 10px;
+            }
+
+            .slider-wrapper input[type="range"] {
+                width: 60px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .page-badge {
+                font-size: 11px;
+            }
+
+            .toolbar-bar {
+                flex-wrap: wrap;
+            }
+
+            .toolbar-group {
+                flex-wrap: wrap;
+            }
+
+            .right-pattern-panel {
+                padding: 14px;
+            }
+
+            .code-content {
+                font-size: 12px;
+            }
+
+            .code-lines {
+                font-size: 12px;
+                padding: 0 12px 0 12px;
+            }
+
+            .line-numbers {
+                font-size: 12px;
+                padding: 0 10px 0 14px;
+                min-width: 32px;
+            }
+
+            .line-numbers span,
+            .code-lines .line {
+                height: 20.4px;
+            }
+        }
+
+        /* ===== Misc ===== */
+        .highlight-flash {
+            animation: flash 0.6s ease;
+        }
+
+        @keyframes flash {
+            0%,
+            100% {
+                background: transparent;
+            }
+            50% {
+                background: rgba(59, 130, 246, 0.15);
+            }
+        }
+
+        .glow-text {
+            text-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+        }
+    </style>
+</head>
+<body>
+<!-- ===== HEADER ===== -->
+<header class="page-header">
+    <div class="page-title-group">
+        <h1 class="page-title">HexParse Interpreter</h1>
+        <span class="page-badge">v2.4 · dev</span>
+    </div>
+    <div class="page-status">
+        <span class="status-dot"></span>
+        <span>系统就绪</span>
+        <span style="color:var(--text-muted);margin-left:4px;">·</span>
+        <span style="color:var(--text-muted);">内存 128KB</span>
+    </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<div class="main-wrap">
+
+    <!-- ===== LEFT: CODE PANEL ===== -->
+    <div class="left-code-panel">
+        <!-- Toolbar -->
+        <div class="toolbar-bar">
+            <div class="toolbar-group">
+                <button class="btn btn-success" id="btnRun" title="运行 (F5)">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+                    </svg>
+                    运行
+                </button>
+                <button class="btn btn-amber" id="btnStep" title="步进 (F10)">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <polygon points="6 3 18 12 6 21 6 3" fill="currentColor"/>
+                        <rect x="4" y="3" width="2" height="18" fill="currentColor"/>
+                    </svg>
+                    步进
+                </button>
+                <button class="btn" id="btnPause" title="暂停">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+                        <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="btn btn-danger" id="btnReset" title="重置">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path d="M3 12a9 9 0 1 0 9-9m0 0v6m0-6h-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group">
+                <select class="toolbar-select" id="exampleSelect">
+                    <option value="fib">斐波那契数列</option>
+                    <option value="sort">冒泡排序</option>
+                    <option value="hexdump" selected>十六进制转储</option>
+                    <option value="pattern">图案生成器</option>
+                    <option value="brainfuck">Brainfuck 解释器</option>
+                </select>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group slider-wrapper">
+                <label>速度</label>
+                <input type="range" id="speedSlider" min="1" max="10" value="5"/>
+                <span class="slider-value" id="speedValue">5</span>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group" style="margin-left:auto;">
+                <button class="btn btn-primary" id="btnCompile" title="编译">
+                    <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M6 7h12M6 12h8M6 17h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <rect x="2" y="3" width="20" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    编译
+                </button>
+            </div>
+        </div>
+
+        <!-- Code Editor -->
+        <div class="code-content">
+            <div class="code-editor">
+                <div class="line-numbers" id="lineNumbers"></div>
+                <textarea class="code-lines" id="codeLines"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT: INFO PANEL ===== -->
+    <div class="right-pattern-panel">
+        <div class="info-grid">
+            <!-- Row 1: Variables + Stack -->
+            <div class="info-row">
+                <!-- Variables -->
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <span class="info-card-title">📦 局部变量</span>
+                        <span class="info-card-badge" id="varCount">4</span>
+                    </div>
+                    <div class="info-card-body" id="varContainer">
+                        <div class="var-item"><span class="var-name">a</span><span class="var-value">0x3F</span><span class="var-type">byte</span></div>
+                        <div class="var-item"><span class="var-name">b</span><span class="var-value">0x1A</span><span class="var-type">byte</span></div>
+                        <div class="var-item"><span class="var-name">ptr</span><span class="var-value">0x7FFE</span><span class="var-type">word</span></div>
+                        <div class="var-item"><span class="var-name">flag</span><span class="var-value">true</span><span class="var-type">bool</span></div>
+                    </div>
+                </div>
+                <!-- Stack -->
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <span class="info-card-title">📚 栈</span>
+                        <span class="info-card-badge" id="stackCount">6</span>
+                    </div>
+                    <div class="info-card-body" id="stackContainer">
+                        <div class="stack-item"><span class="stack-idx">#5</span><span class="stack-val">0x7FFC</span></div>
+                        <div class="stack-item"><span class="stack-idx">#4</span><span class="stack-val">0x3F</span></div>
+                        <div class="stack-item"><span class="stack-idx">#3</span><span class="stack-val">0x1A</span></div>
+                        <div class="stack-item"><span class="stack-idx">#2</span><span class="stack-val"><span class="highlight">0x00</span></span></div>
+                        <div class="stack-item"><span class="stack-idx">#1</span><span class="stack-val">0xFF</span></div>
+                        <div class="stack-item"><span class="stack-idx">#0</span><span class="stack-val">0x7F</span></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Row 2: Pattern Output -->
+            <div class="info-card" style="flex:1.2;">
+                <div class="info-card-header">
+                    <span class="info-card-title">🎨 图案输出</span>
+                    <span class="info-card-badge">16×8</span>
+                </div>
+                <div class="pattern-output" id="patternOutput">
+                    <div class="pattern-grid" id="patternGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+    (function () {
+        'use strict';
+
+        // ===== DOM refs =====
+        const codeLinesEl = document.getElementById('codeLines');
+        const lineNumbersEl = document.getElementById('lineNumbers');
+        const exampleSelect = document.getElementById('exampleSelect');
+        const btnRun = document.getElementById('btnRun');
+        const btnStep = document.getElementById('btnStep');
+        const btnPause = document.getElementById('btnPause');
+        const btnReset = document.getElementById('btnReset');
+        const btnCompile = document.getElementById('btnCompile');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const patternGrid = document.getElementById('patternGrid');
+        const varContainer = document.getElementById('varContainer');
+        const stackContainer = document.getElementById('stackContainer');
+        const varCount = document.getElementById('varCount');
+        const stackCount = document.getElementById('stackCount');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // ===== Sample Code =====
+        const samples = {
+            fib: `; 斐波那契数列 — 计算前 10 项
+                mov   a, 0
+                mov   b, 1
+                mov   c, 10
+            .loop:
+                add   a, b
+                swap  a, b
+                dec   c
+                jnz   .loop
+                hlt`,
+            sort: `; 冒泡排序 — 对内存块排序
+                mov   ptr, 0x2000
+                mov   len, 16
+            .outer:
+                mov   i, 0
+                mov   swapped, 0
+            .inner:
+                ld    a, [ptr+i]
+                ld    b, [ptr+i+1]
+                cmp   a, b
+                jle   .skip
+                st    b, [ptr+i]
+                st    a, [ptr+i+1]
+                mov   swapped, 1
+            .skip:
+                inc   i
+                cmp   i, len-1
+                jl    .inner
+                cmp   swapped, 1
+                je    .outer
+                hlt`,
+            hexdump: `; 十六进制转储 — 读取内存区域
+                mov   addr, 0x1000
+                mov   count, 64
+            .read:
+                ld    byte, [addr]
+                call  print_hex
+                inc   addr
+                dec   count
+                jnz   .read
+                hlt`,
+            pattern: `; 图案生成器 — 绘制像素网格
+                mov   x, 0
+                mov   y, 0
+                mov   w, 16
+                mov   h, 8
+            .row:
+                mov   x, 0
+            .col:
+                call  calc_pixel
+                st    color, [pixel_buf]
+                inc   x
+                cmp   x, w
+                jl    .col
+                inc   y
+                cmp   y, h
+                jl    .row
+                hlt`,
+            brainfuck: `; Brainfuck 解释器 — Hello World!
+                ++++++++++[>+++++++>++++++++++>+++>+<<<<-]
+                >++.>+.+++++++..+++.>++.<<+++++++++++++++.
+                >.+++.------.--------.>+.>.
+                hlt`
+        };
+
+        // ===== Code Highlight =====
+        function highlightLine(line) {
+            let s = line;
+            // comments
+            s = s.replace(/(;.*)$/, '<span class="comment">$1</span>');
+            // strings
+            s = s.replace(/"([^"]*)"/g, '<span class="string">"$1"</span>');
+            // numbers (hex)
+            s = s.replace(/\b(0x[0-9A-Fa-f]+)\b/g, '<span class="number">$1</span>');
+            // numbers (decimal)
+            s = s.replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
+            // keywords
+            const kw = ['mov', 'add', 'sub', 'mul', 'div', 'cmp', 'jmp', 'jnz', 'jz', 'jl', 'jle', 'jg', 'jge',
+                'ld', 'st', 'inc', 'dec', 'call', 'ret', 'hlt', 'push', 'pop', 'swap', 'nop', 'and', 'or', 'xor',
+                'shl', 'shr', 'not', 'int'
+            ];
+            const kwRegex = new RegExp('\\b(' + kw.join('|') + ')\\b', 'g');
+            s = s.replace(kwRegex, '<span class="keyword">$1</span>');
+            // registers
+            const regs = ['a', 'b', 'c', 'd', 'e', 'f', 'h', 'l', 'sp', 'bp', 'ip', 'ptr', 'addr', 'len', 'i', 'j',
+                'k', 'x', 'y', 'w', 'h', 'count', 'swapped', 'color'
+            ];
+            const regRegex = new RegExp('\\b(' + regs.join('|') + ')\\b', 'g');
+            s = s.replace(regRegex, '<span class="function">$1</span>');
+            // operators
+            s = s.replace(/([+\-*/%=<>!&|]+)/g, '<span class="operator">$1</span>');
+            return s;
+        }
+
+        function renderCode(code) {
+            const lines = code.split('\n');
+            let codeHtml = '';
+            let numHtml = '';
+            lines.forEach((line, idx) => {
+                const num = idx + 1;
+                numHtml += `<span>${num}</span>`;
+                const highlighted = line.trim() === '' ? '&nbsp;' : highlightLine(line);
+                codeHtml += `<span class="line" data-line="${num}">${highlighted}</span>`;
+            });
+            lineNumbersEl.innerHTML = numHtml;
+            codeLinesEl.innerHTML = codeHtml;
+        }
+
+        // ===== Pattern Grid =====
+        function renderPattern() {
+            const cols = 16;
+            const rows = 8;
+            const total = cols * rows;
+            let html = '';
+            for (let i = 0; i < total; i++) {
+                const r = Math.floor(i / cols);
+                const c = i % cols;
+                let cls = 'pattern-cell';
+                // deterministic pseudo-random pattern
+                const val = (r * 7 + c * 13 + 42) % 20;
+                if (val < 3) cls += ' active';
+                else if (val < 6) cls += ' active-alt';
+                else if (val < 9) cls += ' active-green';
+                else if (val < 12) cls += ' active-amber';
+                else if (val === 15) cls += ' active';
+                else if (val === 18) cls += ' active-alt';
+                html += `<div class="${cls}" data-idx="${i}"></div>`;
+            }
+            patternGrid.innerHTML = html;
+        }
+
+        // ===== Variables & Stack =====
+        function randomHex() {
+            return '0x' + Math.floor(Math.random() * 256).toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        function randomWord() {
+            return '0x' + Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function updateVariables() {
+            const names = ['a', 'b', 'ptr', 'flag', 'tmp', 'result', 'counter', 'status'];
+            const types = ['byte', 'byte', 'word', 'bool', 'byte', 'word', 'byte', 'byte'];
+            const count = 3 + Math.floor(Math.random() * 4);
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                const name = names[i % names.length];
+                const type = types[i % types.length];
+                let val;
+                if (type === 'bool') val = Math.random() > 0.5 ? 'true' : 'false';
+                else if (type === 'word') val = randomWord();
+                else val = randomHex();
+                html += `<div class="var-item"><span class="var-name">${name}</span><span class="var-value">${val}</span><span class="var-type">${type}</span></div>`;
+            }
+            varContainer.innerHTML = html;
+            varCount.textContent = count;
+        }
+
+        function updateStack() {
+            const count = 4 + Math.floor(Math.random() * 6);
+            let html = '';
+            for (let i = count - 1; i >= 0; i--) {
+                const val = randomHex();
+                const isHighlight = i === 2 || i === 0;
+                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val">${isHighlight ? '<span class="highlight">' + val + '</span>' : val}</span></div>`;
+            }
+            stackContainer.innerHTML = html;
+            stackCount.textContent = count;
+        }
+
+        // ===== Toast =====
+        function showToast(message, type = 'info') {
+            const icons = {
+                info: 'ℹ️',
+                success: '✅',
+                error: '❌',
+                warning: '⚠️'
+            };
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span> ${message}`;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                toast.style.transition = 'all 0.4s ease';
+                setTimeout(() => toast.remove(), 400);
+            }, 2800);
+        }
+
+        // ===== Simulate execution =====
+        let isRunning = false;
+        let intervalId = null;
+
+        function toggleRun() {
+            if (isRunning) {
+                // Pause
+                isRunning = false;
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+                btnRun.innerHTML =
+                    `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+                btnRun.className = 'btn btn-success';
+                showToast('⏸️ 已暂停', 'warning');
+                return;
+            }
+
+            // Start
+            isRunning = true;
+            btnRun.innerHTML =
+                `<svg viewBox="0 0 24 24" width="18" height="18"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg> 暂停`;
+            btnRun.className = 'btn btn-amber';
+            showToast('▶️ 执行中…', 'info');
+
+            const speed = parseInt(speedSlider.value);
+            const delay = Math.max(100, 1200 - speed * 100);
+
+            let step = 0;
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                step++;
+                // Update pattern — animate a few cells
+                const cells = patternGrid.querySelectorAll('.pattern-cell');
+                const activeCount = 8 + Math.floor(Math.random() * 16);
+                // reset all
+                cells.forEach(c => {
+                    c.className = 'pattern-cell';
+                });
+                // activate random
+                const indices = [];
+                while (indices.length < activeCount) {
+                    const idx = Math.floor(Math.random() * cells.length);
+                    if (!indices.includes(idx)) indices.push(idx);
+                }
+                const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
+                indices.forEach((idx, i) => {
+                    const cls = colors[i % colors.length];
+                    cells[idx].classList.add(cls);
+                });
+
+                // Update variables & stack every few steps
+                if (step % 3 === 0) updateVariables();
+                if (step % 2 === 0) updateStack();
+
+                // Highlight a random code line
+                const lines = codeLinesEl.querySelectorAll('.line');
+                lines.forEach(l => l.classList.remove('active-line'));
+                if (lines.length > 0) {
+                    const rand = Math.floor(Math.random() * lines.length);
+                    lines[rand].classList.add('active-line');
+                }
+
+                // Show a toast occasionally
+                if (step % 8 === 0) {
+                    const msgs = ['⏳ 执行指令', '📊 更新内存', '🔄 栈帧切换', '🎯 命中断点', '📈 性能采样'];
+                    showToast(msgs[Math.floor(Math.random() * msgs.length)], 'info');
+                }
+
+                if (step > 60) {
+                    // auto-stop after a while
+                    clearInterval(intervalId);
+                    intervalId = null;
+                    isRunning = false;
+                    btnRun.innerHTML =
+                        `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+                    btnRun.className = 'btn btn-success';
+                    showToast('⏹️ 执行完成', 'success');
+                }
+            }, delay);
+        }
+
+        function stepOnce() {
+            if (isRunning) {
+                showToast('⚠️ 请先暂停再单步', 'warning');
+                return;
+            }
+            // Animate one step
+            const cells = patternGrid.querySelectorAll('.pattern-cell');
+            const idx = Math.floor(Math.random() * cells.length);
+            cells.forEach(c => c.className = 'pattern-cell');
+            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
+            cells[idx].classList.add(colors[Math.floor(Math.random() * colors.length)]);
+            // update vars/stack
+            updateVariables();
+            updateStack();
+            // highlight line
+            const lines = codeLinesEl.querySelectorAll('.line');
+            lines.forEach(l => l.classList.remove('active-line'));
+            if (lines.length > 0) {
+                const rand = Math.floor(Math.random() * lines.length);
+                lines[rand].classList.add('active-line');
+            }
+            showToast('⏭️ 单步执行', 'info');
+        }
+
+        function resetAll() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            isRunning = false;
+            btnRun.innerHTML =
+                `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+            btnRun.className = 'btn btn-success';
+
+            // Reset pattern
+            const cells = patternGrid.querySelectorAll('.pattern-cell');
+            cells.forEach(c => c.className = 'pattern-cell');
+            // Add some default pattern
+            const defaultPattern = [2, 5, 8, 13, 17, 21, 25, 30, 34, 38, 42, 47, 51, 55, 60, 64, 68, 72, 77, 81, 85, 90,
+                94, 98, 103, 107, 111, 116, 120
+            ];
+            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
+            defaultPattern.forEach((idx, i) => {
+                if (idx < cells.length) {
+                    cells[idx].classList.add(colors[i % colors.length]);
+                }
+            });
+
+            updateVariables();
+            updateStack();
+            const lines = codeLinesEl.querySelectorAll('.line');
+            lines.forEach(l => l.classList.remove('active-line'));
+            showToast('🔄 已重置', 'success');
+        }
+
+        // ===== Compile =====
+        function compileCode() {
+            showToast('🔨 编译成功 · 无错误', 'success');
+        }
+
+        // ===== Switch sample =====
+        function loadSample(name) {
+            const code = samples[name] || samples.hexdump;
+            renderCode(code);
+            // Reset execution state
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+                isRunning = false;
+                btnRun.innerHTML =
+                    `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+                btnRun.className = 'btn btn-success';
+            }
+            // Reset pattern
+            const cells = patternGrid.querySelectorAll('.pattern-cell');
+            cells.forEach(c => c.className = 'pattern-cell');
+            // Add a default pattern
+            const defaultPattern = [2, 5, 8, 13, 17, 21, 25, 30, 34, 38, 42, 47, 51, 55, 60, 64, 68, 72, 77, 81, 85, 90,
+                94, 98, 103, 107, 111, 116, 120
+            ];
+            const colors = ['active', 'active-alt', 'active-green', 'active-amber'];
+            defaultPattern.forEach((idx, i) => {
+                if (idx < cells.length) {
+                    cells[idx].classList.add(colors[i % colors.length]);
+                }
+            });
+            updateVariables();
+            updateStack();
+            const lines = codeLinesEl.querySelectorAll('.line');
+            lines.forEach(l => l.classList.remove('active-line'));
+            showToast(`📂 已加载: ${exampleSelect.options[exampleSelect.selectedIndex].text}`, 'info');
+        }
+
+        // ===== Event Listeners =====
+        btnRun.addEventListener('click', toggleRun);
+        btnStep.addEventListener('click', stepOnce);
+        btnPause.addEventListener('click', () => {
+            if (isRunning) {
+                toggleRun();
+            } else {
+                showToast('⏸️ 当前未运行', 'warning');
+            }
+        });
+        btnReset.addEventListener('click', resetAll);
+        btnCompile.addEventListener('click', compileCode);
+
+        exampleSelect.addEventListener('change', function () {
+            loadSample(this.value);
+        });
+
+        speedSlider.addEventListener('input', function () {
+            speedValue.textContent = this.value;
+            if (isRunning) {
+                // restart with new speed
+                const wasRunning = isRunning;
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+                isRunning = false;
+                if (wasRunning) {
+                    toggleRun(); // restart
+                }
+            }
+        });
+
+        // Click on code line -> set breakpoint (toggle)
+        codeLinesEl.addEventListener('click', function (e) {
+            const line = e.target.closest('.line');
+            if (line) {
+                line.classList.toggle('breakpoint');
+                const num = line.dataset.line;
+                if (line.classList.contains('breakpoint')) {
+                    showToast(`🔴 断点已设置: 第 ${num} 行`, 'warning');
+                } else {
+                    showToast(`⚪ 断点已移除: 第 ${num} 行`, 'info');
+                }
+            }
+        });
+
+        // ===== Init =====
+        function init() {
+            // Load default sample
+            renderCode(samples.hexdump);
+            renderPattern();
+            updateVariables();
+            updateStack();
+            // Add some active lines initially
+            const lines = codeLinesEl.querySelectorAll('.line');
+            if (lines.length > 3) {
+                lines[3].classList.add('active-line');
+                lines[7].classList.add('active-line');
+            }
+            showToast('🚀 HexParse 已就绪', 'success');
+        }
+
+        init();
+
+        // ===== Keyboard shortcuts =====
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F5') {
+                e.preventDefault();
+                toggleRun();
+            } else if (e.key === 'F10') {
+                e.preventDefault();
+                stepOnce();
+            } else if (e.key === 'F9') {
+                e.preventDefault();
+                // toggle breakpoint on current line — find active line
+                const active = codeLinesEl.querySelector('.line.active-line');
+                if (active) {
+                    active.classList.toggle('breakpoint');
+                    const num = active.dataset.line;
+                    if (active.classList.contains('breakpoint')) {
+                        showToast(`🔴 断点已设置: 第 ${num} 行`, 'warning');
+                    } else {
+                        showToast(`⚪ 断点已移除: 第 ${num} 行`, 'info');
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                    isRunning = false;
+                    btnRun.innerHTML =
+                        `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
+                    btnRun.className = 'btn btn-success';
+                    showToast('⏹️ 已强制停止', 'error');
+                }
+            }
+        });
+
+        // Expose some functions to console for fun
+        window.__hexparse = {
+            loadSample,
+            resetAll,
+            toggleRun,
+            stepOnce,
+            showToast,
+            renderCode,
+            updateVariables,
+            updateStack
+        };
+
+    })();
+</script>
+
+</body>
+</html>
