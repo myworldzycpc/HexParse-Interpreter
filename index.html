@@ -1143,9 +1143,12 @@
     if, eval
 )
 duplicate, eval`,
-            basic: `// 基础测试
+            basic: `// 基础测试 - 单行注释
 num_1
 num_2
+/* 这是多行注释
+   可以跨越多行
+   add 命令会弹出两个数并压入它们的和 */
 add
 print
 const/true
@@ -1412,6 +1415,7 @@ print`
                         }
                     }
                     consoleLog(`~ [${removed.map(v => this.formatValue(v)).join(', ')}]`, 'info');
+                    updateStackDisplay(mindStack);
                     return removed;
                 }
                 consoleLog(`[Accident] 本应接受大于等于${count}个参数，而实际栈中元素数为${this.stack.length}`, 'error');
@@ -1696,6 +1700,10 @@ print`
         }
 
         function splitCommand(text) {
+            // 移除多行注释 /* ... */
+            text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+            // 移除单行注释 // ...
+            text = text.replace(/\/\/[^\n]*/g, '');
             const pattern = /[^\s,()]+|\(|\)/g;
             return text.match(pattern) || [];
         }
@@ -1862,6 +1870,8 @@ print`
             const lines = codeLinesEl.querySelectorAll('.line');
             lines.forEach(l => l.classList.remove('active-line'));
 
+            const indent = '    '.repeat(mindStack.introspectLevel);
+            consoleLog(`${indent}step> ${cmd}`, 'input');
             const result = mindStack.runCommand(cmd);
             currentCmdIndex++;
 

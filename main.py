@@ -376,6 +376,10 @@ def run_file(mind_stack: MindStack, file_name: str):
 
 
 def split_command(text):
+    # 移除多行注释 /* ... */
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
+    # 移除单行注释 // ...
+    text = re.sub(r'//[^\n]*', '', text)
     pattern = r'[^\s,()]+|\(|\)'
     return re.findall(pattern, text)
 
