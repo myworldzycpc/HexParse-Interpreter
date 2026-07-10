@@ -692,6 +692,7 @@
             font-size: 13px;
             line-height: 1.6;
             color: var(--text-primary);
+            max-height: 500px;
         }
 
         .console-line {
@@ -1189,7 +1190,7 @@ print`
         let inputHistory = [];
         let historyIndex = -1;
 
-        function executeConsoleInput() {
+        async function executeConsoleInput() {
             const text = consoleInput.value.trim();
             if (!text) return;
 
@@ -1200,13 +1201,17 @@ print`
             // Show input in console
             consoleLog(`❯ ${text}`, 'input');
             consoleInput.value = '';
+            consoleInput.disabled = true;
 
             // Execute
             if (!mindStack) {
                 initInterpreter();
             }
 
-            const result = mindStack.runProgram(text);
+            const result = await mindStack.runProgramAsync(text);
+            consoleInput.disabled = false;
+            consoleInput.focus();
+
             if (result === 'halt') {
                 consoleLog('// 程序已暂停 (halt)', 'info');
                 statusText.textContent = '已暂停';
@@ -1428,7 +1433,7 @@ print`
                 updateVarDisplay(this);
             }
 
-            runCommand(command) {
+            async runCommand(command) {
                 try {
                     if (this.introspectLevel > 0 && command !== '(' && command !== ')') {
                         this.introspect.push(command);
@@ -1638,12 +1643,21 @@ print`
                                 } else if (Array.isArray(toEval)) {
                                     list = toEval;
                                 }
-                                for (const cmd of list) {
+                                for (let i = 0; i < list.length; i++) {
+                                    const cmd = list[i];
                                     const indent = '    '.repeat(this.introspectLevel);
                                     consoleLog(`${indent}eval> ${cmd}`, 'input');
-                                    const result = this.runCommand(cmd);
+                                    const result = await this.runCommand(cmd);
                                     if (result === 'accident') {
                                         throw new Error('EvalAccident');
+                                    }
+                                    if (result === 'halt') {
+                                        return 'halt';
+                                    }
+                                    // 每几条让出一次
+                                    if ((i + 1) % 5 === 0) {
+                                        console.log("让出循环");
+                                        await new Promise(resolve => setTimeout(resolve, 0));
                                     }
                                 }
                                 break;
@@ -1684,15 +1698,27 @@ print`
                 return 'success';
             }
 
-            runProgram(text) {
+            // 异步批量执行（避免UI阻塞）
+            async runProgramAsync(text, onProgress) {
                 const commands = splitCommand(text);
-                for (const cmd of commands) {
+                for (let i = 0; i < commands.length; i++) {
+                    const cmd = commands[i];
                     const indent = '    '.repeat(this.introspectLevel);
                     consoleLog(`${indent}run_program> ${cmd}`, 'input');
-                    const result = this.runCommand(cmd);
+
+                    let result = await this.runCommand(cmd);
+
+                    if (onProgress) onProgress(i + 1, commands.length);
+
                     if (result !== 'success') {
-                        if (result === 'halt') break;
+                        if (result === 'halt') return 'halt';
                         return 'accident';
+                    }
+
+                    // 每执行几条让出一次事件循环，避免卡顿
+                    if ((i + 1) % 5 === 0) {
+                        console.log("让出循环");
+                        await new Promise(resolve => setTimeout(resolve, 0));
                     }
                 }
                 return 'success';
@@ -1811,7 +1837,6 @@ print`
         let programCommands = [];
         let currentCmdIndex = 0;
         let isRunning = false;
-        let intervalId = null;
 
         function initInterpreter() {
             const caster = new Entity('caster', new Vector(0, 0, 0), 1.8);
@@ -1822,10 +1847,6 @@ print`
         }
 
         function resetAll() {
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-            }
             isRunning = false;
             currentCmdIndex = 0;
             programCommands = [];
@@ -1851,7 +1872,7 @@ print`
             consoleLog(`// 加载完成，共 ${programCommands.length} 条命令`, 'info');
         }
 
-        function stepOnce() {
+        async function stepOnce() {
             if (!mindStack) initInterpreter();
 
             if (programCommands.length === 0) {
@@ -1872,7 +1893,7 @@ print`
 
             const indent = '    '.repeat(mindStack.introspectLevel);
             consoleLog(`${indent}step> ${cmd}`, 'input');
-            const result = mindStack.runCommand(cmd);
+            const result = await mindStack.runCommand(cmd);
             currentCmdIndex++;
 
             if (result === 'halt') {
@@ -1889,14 +1910,10 @@ print`
             return true;
         }
 
-        function toggleRun() {
+        async function toggleRun() {
             if (isRunning) {
                 // Pause
                 isRunning = false;
-                if (intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
-                }
                 btnRun.innerHTML =
                     `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
                 btnRun.className = 'btn btn-success';
@@ -1918,12 +1935,9 @@ print`
             const speed = parseInt(speedSlider.value);
             const delay = Math.max(50, 800 - speed * 70);
 
-            if (intervalId) clearInterval(intervalId);
-            intervalId = setInterval(() => {
-                const cont = stepOnce();
+            while (isRunning) {
+                const cont = await stepOnce();
                 if (!cont) {
-                    clearInterval(intervalId);
-                    intervalId = null;
                     isRunning = false;
                     btnRun.innerHTML =
                         `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
@@ -1933,21 +1947,32 @@ print`
                         statusText.textContent = '执行完成';
                     }
                 }
-            }, delay);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
 
-        function runAll() {
+        async function runAll() {
             if (!mindStack) initInterpreter();
 
             const code = codeLinesEl.value;
             consoleLog('// 开始执行完整程序', 'info');
             statusText.textContent = '执行中...';
 
-            const result = mindStack.runProgram(code);
+            // 禁用按钮防止重复点击
+            btnCompile.disabled = true;
+            btnRun.disabled = true;
+
+            const result = await mindStack.runProgramAsync(code);
+
+            btnCompile.disabled = false;
+            btnRun.disabled = false;
 
             if (result === 'success') {
                 showToast('✅ 执行完成', 'success');
                 statusText.textContent = '执行完成';
+            } else if (result === 'halt') {
+                showToast('⏸️ 程序暂停', 'warning');
+                statusText.textContent = '已暂停';
             } else {
                 showToast('❌ 执行出错', 'error');
                 statusText.textContent = '执行出错';
@@ -1961,9 +1986,7 @@ print`
             renderCode(code.trim());
 
             // Reset execution state
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
+            if (isRunning) {
                 isRunning = false;
                 btnRun.innerHTML =
                     `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
@@ -2007,10 +2030,6 @@ print`
             speedValue.textContent = this.value;
             if (isRunning) {
                 const wasRunning = isRunning;
-                if (intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
-                }
                 isRunning = false;
                 if (wasRunning) {
                     toggleRun(); // restart
@@ -2044,9 +2063,7 @@ print`
                 e.preventDefault();
                 if (!isRunning) stepOnce();
             } else if (e.key === 'Escape') {
-                if (intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
+                if (isRunning) {
                     isRunning = false;
                     btnRun.innerHTML =
                         `<svg viewBox="0 0 24 24" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg> 运行`;
