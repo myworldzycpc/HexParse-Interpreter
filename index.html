@@ -4,6 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>HexParse Interpreter</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <style>
         /* ===== CSS Variables ===== */
         :root {
@@ -756,9 +757,102 @@
             color: var(--text-muted);
         }
 
-        .console-prompt {
-            color: var(--accent-green);
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            width: 90vw;
+            height: 85vh;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            font-size: 14px;
             font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 18px;
+            line-height: 1;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .modal-body {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #05070d;
+        }
+
+        #worldViewCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .world-view-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-muted);
+            font-size: 12px;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 12px;
+            border-radius: 4px;
         }
 
         /* ---- Empty state ---- */
@@ -1026,6 +1120,14 @@
                     </svg>
                     运行全部
                 </button>
+                <button class="btn btn-secondary" id="btnWorldView" title="世界视图">
+                    <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    世界视图
+                </button>
             </div>
         </div>
 
@@ -1033,7 +1135,7 @@
         <div class="code-content">
             <div class="code-editor">
                 <div class="line-numbers" id="lineNumbers"></div>
-                <textarea class="code-lines" id="codeLines" spellcheck="false"></textarea>
+                <div class="code-lines" id="codeLines" spellcheck="false" contenteditable></div>
             </div>
         </div>
     </div>
@@ -1088,6 +1190,21 @@
 
 <!-- ===== TOAST CONTAINER ===== -->
 <div class="toast-container" id="toastContainer"></div>
+
+
+<!-- 世界视图模态框 -->
+<div class="modal-overlay" id="worldViewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title">🌍 世界视图</span>
+            <button class="modal-close" id="worldViewClose">×</button>
+        </div>
+        <div class="modal-body">
+            <canvas id="worldViewCanvas"></canvas>
+            <div class="world-view-hint">拖拽旋转视角 · 滚轮缩放</div>
+        </div>
+    </div>
+</div>
 
 <!-- ===== JAVASCRIPT ===== -->
 <script>
@@ -2021,6 +2138,200 @@ print`
         });
         btnReset.addEventListener('click', resetAll);
         btnCompile.addEventListener('click', runAll);
+
+        // ===== World View 3D =====
+        const worldViewBtn = document.getElementById('btnWorldView');
+        const worldViewModal = document.getElementById('worldViewModal');
+        const worldViewClose = document.getElementById('worldViewClose');
+        const worldViewCanvas = document.getElementById('worldViewCanvas');
+
+        let scene, camera, renderer, worldGroup;
+        let isDragging = false;
+        let prevMouseX = 0, prevMouseY = 0;
+        let cameraAngleX = 0.5, cameraAngleY = 0.8;
+        let cameraDistance = 20;
+
+        function initWorldView() {
+            const rect = worldViewCanvas.parentElement.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x05070d);
+
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            updateCameraPosition();
+
+            renderer = new THREE.WebGLRenderer({canvas: worldViewCanvas, antialias: true});
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // 光照
+            const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            // 网格地面
+            const gridHelper = new THREE.GridHelper(30, 30, 0x2d3d5e, 0x1a2540);
+            gridHelper.position.y = -0.5;
+            scene.add(gridHelper);
+
+            // 坐标轴
+            const axesHelper = new THREE.AxesHelper(5);
+            scene.add(axesHelper);
+
+            worldGroup = new THREE.Group();
+            scene.add(worldGroup);
+
+            // 鼠标事件
+            worldViewCanvas.addEventListener('mousedown', onMouseDown);
+            worldViewCanvas.addEventListener('mousemove', onMouseMove);
+            worldViewCanvas.addEventListener('mouseup', onMouseUp);
+            worldViewCanvas.addEventListener('mouseleave', onMouseUp);
+            worldViewCanvas.addEventListener('wheel', onWheel);
+
+            window.addEventListener('resize', onWorldViewResize);
+        }
+
+        function updateCameraPosition() {
+            camera.position.x = Math.sin(cameraAngleX) * Math.cos(cameraAngleY) * cameraDistance;
+            camera.position.y = Math.sin(cameraAngleY) * cameraDistance;
+            camera.position.z = Math.cos(cameraAngleX) * Math.cos(cameraAngleY) * cameraDistance;
+            camera.lookAt(0, 0, 0);
+        }
+
+        function onMouseDown(e) {
+            isDragging = true;
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        }
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - prevMouseX;
+            const dy = e.clientY - prevMouseY;
+            cameraAngleX -= dx * 0.01;
+            cameraAngleY = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraAngleY + dy * 0.01));
+            updateCameraPosition();
+            prevMouseX = e.clientX;
+            prevMouseY = e.clientY;
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+        }
+
+        function onWheel(e) {
+            e.preventDefault();
+            cameraDistance = Math.max(5, Math.min(80, cameraDistance + e.deltaY * 0.05));
+            updateCameraPosition();
+        }
+
+        function onWorldViewResize() {
+            if (!renderer) return;
+            const rect = worldViewCanvas.parentElement.getBoundingClientRect();
+            camera.aspect = rect.width / rect.height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(rect.width, rect.height);
+        }
+
+        function buildWorldGeometry() {
+            if (!worldGroup) return;
+
+            // 清空旧的
+            while (worldGroup.children.length > 0) {
+                const child = worldGroup.children[0];
+                worldGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            }
+
+            if (!mindStack || !mindStack.world) return;
+
+            // 渲染方块
+            const blocks = mindStack.world.blocks;
+            const blockGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+            const blockMat = new THREE.MeshLambertMaterial({color: 0x8b7355});
+
+            for (const key in blocks) {
+                const [x, y, z] = key.split(',').map(Number);
+                const cube = new THREE.Mesh(blockGeo, blockMat);
+                cube.position.set(x, y, z);
+                worldGroup.add(cube);
+
+                // 线框
+                const edges = new THREE.EdgesGeometry(blockGeo);
+                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0x5a4a3a}));
+                line.position.copy(cube.position);
+                worldGroup.add(line);
+            }
+
+            // 渲染实体（竖直线段）
+            if (mindStack.caster) {
+                const entity = mindStack.caster;
+                const pos = entity.pos;
+                const eyeH = entity.eyeHeight || 1.7;
+
+                // 身体线段
+                const bodyGeo = new THREE.CylinderGeometry(0.1, 0.1, eyeH, 8);
+                const bodyMat = new THREE.MeshLambertMaterial({color: 0x3b82f6});
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.set(pos.x, pos.y + eyeH / 2, pos.z);
+                worldGroup.add(body);
+
+                // 头部
+                const headGeo = new THREE.SphereGeometry(0.2, 16, 16);
+                const headMat = new THREE.MeshLambertMaterial({color: 0xf59e0b});
+                const head = new THREE.Mesh(headGeo, headMat);
+                head.position.set(pos.x, pos.y + eyeH + 0.1, pos.z);
+                worldGroup.add(head);
+
+                // 视线方向
+                const dirGeo = new THREE.ConeGeometry(0.08, 0.4, 8);
+                const dirMat = new THREE.MeshLambertMaterial({color: 0x10b981});
+                const dir = new THREE.Mesh(dirGeo, dirMat);
+                dir.position.set(pos.x, pos.y + eyeH, pos.z - 0.5);
+                dir.rotation.x = Math.PI / 2;
+                worldGroup.add(dir);
+            }
+        }
+
+        function animateWorldView() {
+            if (!worldViewModal.classList.contains('active')) return;
+            requestAnimationFrame(animateWorldView);
+            renderer.render(scene, camera);
+        }
+
+        function openWorldView() {
+            worldViewModal.classList.add('active');
+            // if (!scene) {
+            //     setTimeout(() => {
+            //         initWorldView();
+            //         buildWorldGeometry();
+            //         animateWorldView();
+            //     }, 100);
+            // } else {
+            //     buildWorldGeometry();
+            //     onWorldViewResize();
+            // }
+            setTimeout(() => {
+                initWorldView();
+                buildWorldGeometry();
+                animateWorldView();
+            }, 100);
+        }
+
+        function closeWorldView() {
+            worldViewModal.classList.remove('active');
+        }
+
+        worldViewBtn.addEventListener('click', openWorldView);
+        worldViewClose.addEventListener('click', closeWorldView);
+        worldViewModal.addEventListener('click', function (e) {
+            if (e.target === worldViewModal) closeWorldView();
+        });
 
         exampleSelect.addEventListener('change', function () {
             loadSample(this.value);
