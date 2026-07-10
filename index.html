@@ -1569,8 +1569,8 @@ print`
                                 break;
                             case 'print': {
                                 const value = this.pop(Object)[0];
-                                consoleLog(`[print] ${this.formatValue(value)}`, 'output');
                                 this.push(value);
+                                consoleLog(`[print] ${this.formatValue(value)}`, 'output');
                                 break;
                             }
                             case 'get_caster':
@@ -2359,7 +2359,7 @@ print`
         // ===== Init =====
         function init() {
             // Load default sample
-            loadSample('circle');
+            loadSample('basic');
             showToast('🚀 HexParse 解释器已就绪', 'success');
         }
 
