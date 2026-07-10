@@ -1,0 +1,28 @@
+const/double/tau
+(
+                swap
+                    const/double/pi
+                    num_30
+                div_cross
+            sub
+            duplicate
+            num_0
+        greater
+        (
+                            duplicate, cos
+                            num_10
+                        mul_dot
+                            over, sin
+                            num_10
+                        mul_dot
+                        num_0, swap
+                    construct_vec
+                    get_caster, entity_pos/foot
+                add, duplicate, break_block, place_block
+            swap
+            duplicate, eval
+        )
+        (halt)
+    if, eval
+)
+duplicate, eval
