@@ -2,6 +2,21 @@
 
 一个可以模拟执行 [HexParse](https://modrinth.com/mod/hexparse) 代码的解释器
 
+## 运行方式
+
+提供两种语言的实现：
+
+### Web可视化版本 `index.html`：
+
+这是目前功能较完善的版本，支持步进、逐步运行、实时栈和变量查看、世界视图等。
+
+- 方式1：直接访问GitHub Pages: https://github.com/myworldzycpc/HexParse-Interpreter
+- 方式2：克隆项目，直接用浏览器打开index.html即可
+
+### Python命令行版本 `main.py`：
+
+CLI接口正在开发中
+
 ## 目前支持的图案类型
 
 ### 基本图案
