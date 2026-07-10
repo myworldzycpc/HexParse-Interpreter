@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
     caster = Entity("caster", Vector(0, 0, 0), 1.8)
     m = MindStack(caster=caster, world=World())
-    run_file(m, "画圆.hexparse")
+    # run_file(m, "画圆.hexparse")
     start_repl(m)
 
 """
