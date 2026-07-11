@@ -133,6 +133,7 @@ python main.py -q script.hexparse
 | `)` | 结束收集并压入列表 | -                       | `list` |
 | `eval` | 执行栈顶的命令列表 | `list \| Command`  | 执行结果   |
 | `if` | 条件选择      | `cond, then, else`      | 结果     |
+| `for_each` | 遍历列表执行命令  |	`commands, iterable` | 结果列表 |
 
 ### 世界操作
 
