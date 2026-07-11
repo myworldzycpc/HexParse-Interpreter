@@ -58,12 +58,14 @@ python main.py -q script.hexparse
 
 ### 栈操作
 
-| 命令 | 功能 | 入栈 | 出栈 |
-|------|------|------|------|
-| `duplicate` | 复制栈顶元素 | `a` | `a, a` |
-| `swap` | 交换栈顶两个元素 | `a, b` | `b, a` |
-| `over` | 复制倒数第二个元素到栈顶 | `a, b` | `a, b, a` |
-| `mask_*` | 选择性擦除栈顶元素 | 一个或多个元素               | 按掩码提取 |
+| 命令          | 功能 | 入栈 | 出栈             |
+|-------------|------|------|----------------|
+| `duplicate` | 复制栈顶元素 | `a` | `a, a`         |
+| `swap`      | 交换栈顶两个元素 | `a, b` | `b, a`         |
+| `over`      | 复制倒数第二个元素到栈顶 | `a, b` | `a, b, a`      |
+| `mask_*`    | 选择性擦除栈顶元素 | 一个或多个元素               | 按掩码提取          |
+| `stack_len` | 栈长度压栈| - | `float`        |
+|  `2dup`     | 复制栈顶两个元素| `a, b`|  `a, b, a, b`  |
 
 ### 常量
 
@@ -94,6 +96,27 @@ python main.py -q script.hexparse
 | 命令 | 功能        | 入栈                    | 出栈 |
 |------|-----------|-----------------------|------|
 | `construct_vec` | 构造三维向量    | `float, float, float` | `Vector` |
+
+### 列表操作
+
+| 命令                | 功能           | 入栈                 | 出栈               |
+|-------------------|--------------|--------------------|------------------|
+| `last_n_list`     | 栈顶 n 个元素组成列表 | `..., n`           | `list`           |
+| `splat`           | 列表展开压栈       | `list`             | `...elements`    |
+| `index`           | 按索引取元素       | `list, n`          | `element / NULL` |
+| `slice`           | 列表切片         | `list, start, end` | `list`           |
+| `append`          | 末尾追加元素       | `list, item`       | `new_list`       |
+| `concat`          | 拼接两个列表       | `l1, l2`           | `new_list`       |
+| `empty_list`      | 空列表          | -                  | `[]`             |
+| `singleton`       | 单元素列表        | `item`             | `[item]`         |
+| `list_size`       | 列表长度         | `list`             | `float`          |
+| `reverse_list`    | 反转列表         | `list`             | `reversed`       |
+| `index_of`        | 查找元素索引       | `list, item`       | `float` (-1未找到)   |
+| `list_remove`     | 按索引删除        | `list, n`          | `new_list`       |
+| `modify_in_place` | 按索引修改        | `list, n, item`    | `new_list`       |
+| `construct`       | 头部添加元素       | `list, item`       | `[item, ...list]` |
+| `deconstruct`     | 拆分头部和剩余      | `list`             | `rest, first`    |
+
 
 ### 局部变量
 

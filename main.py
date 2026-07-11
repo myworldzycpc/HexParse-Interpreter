@@ -78,6 +78,22 @@ class World:
         self.blocks.clear()
 
 
+def format_value(value):
+    """统一格式化输出值"""
+    if value is None:
+        return "NULL"
+    elif isinstance(value, bool):
+        return "true" if value else "false"
+    elif isinstance(value, float):
+        return f"{value:.2f}"
+    elif isinstance(value, (tuple, list)):
+        return "[" + ", ".join(format_value(v) for v in value) + "]"
+    elif isinstance(value, Vector):
+        return str(value)  # Vector已经是两位小数格式
+    else:
+        return str(value)
+
+
 class MindStack:
     def __init__(self, caster: Entity, world: World, verbose: bool = True):
         self.stack = []
@@ -96,9 +112,13 @@ class MindStack:
     def push(self, *item):
         if self.verbose:
             if len(self.stack) > 20:
-                display_str = f"[...({len(self.stack) - 20} more), {"".join(f"{i}, " for i in self.stack[-20:])}*{", ".join(str(i) for i in item)}]"
+                visible = ", ".join(format_value(i) for i in self.stack[-20:])
+                pushed = ", ".join(format_value(i) for i in item)
+                display_str = f"[...({len(self.stack) - 20} more), {visible}, *{pushed}]"
             else:
-                display_str = f"[{"".join(f"{i}, " for i in self.stack)}*{", ".join(str(i) for i in item)}]"
+                stack_str = ", ".join(format_value(i) for i in self.stack)
+                pushed = ", ".join(format_value(i) for i in item)
+                display_str = f"[{stack_str}, *{pushed}]"
             if len(display_str) > 100:
                 display_str = display_str[:50] + "..." + display_str[-50:]
             print(display_str)
@@ -113,13 +133,13 @@ class MindStack:
                 if not isinstance(val, type):
                     raise TypeAccident(count - 1 - i, type, val)
             if self.verbose:
-                print(f"~ {removed}")
+                print(f"~ {format_value(removed)}")
             return removed
         raise IndexAccident(count)
 
     def set_local(self, local):
         self.local = local
-        print(f"local: {self.local}")
+        print(f"local: {format_value(self.local)}")
 
     def run_command(self, command):
         try:
@@ -130,7 +150,7 @@ class MindStack:
             else:
                 match command:
                     case '/stack':
-                        print(self.stack)
+                        print(format_value(self.stack))
                     case '/clear':
                         self.stack.clear()
                         print("已清空栈")
@@ -138,7 +158,7 @@ class MindStack:
                         self.world.clear()
                         print("世界已清空")
                     case '/local':
-                        print(f"local: {self.local}")
+                        print(f"local: {format_value(self.local)}")
                     case '/verbose':
                         self.verbose = True
                         print("详细模式已开启")
@@ -155,8 +175,8 @@ class MindStack:
                         for i in self.world.blocks:
                             print(f"  {str(i):10}: {self.world.blocks[i]}")
                     case 'print':
-                        value = self.pop(object)
-                        print(f"[print] {value}")
+                        value = self.pop(object)[0]
+                        print(f"[print] {format_value(value)}")
                         self.push(value)
                     case 'get_caster':
                         self.push(self.caster)
@@ -189,7 +209,7 @@ class MindStack:
                         a, b = self.pop(object, object)
                         self.push(b, a)
                     case 'stack_len':
-                        self.push(len(self.stack))
+                        self.push(float(len(self.stack)))
                     case 'construct_vec':
                         x, y, z = self.pop(float, float, float)
                         self.push(Vector(x, y, z))
@@ -331,15 +351,15 @@ class MindStack:
                     case 'singleton':
                         self.push((self.pop(object)[0],))
                     case 'list_size':
-                        self.push(len(self.pop(tuple)[0]))
+                        self.push(float(len(self.pop(tuple)[0])))
                     case 'reverse_list':
                         self.push(tuple(reversed(self.pop(tuple)[0])))
                     case 'index_of':
                         l, item = self.pop(tuple, object)
                         try:
-                            self.push(l.index(item))
+                            self.push(float(l.index(item)))
                         except ValueError:
-                            self.push(-1)
+                            self.push(-1.0)
                     case 'list_remove':
                         l, n = self.pop(tuple, float)
                         n = int(n)
@@ -549,14 +569,14 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    args = Namespace()
-    args.files = ["example/for_each.hexparse"]
-    args.quiet = False
-    args.command = None
-    args.interactive = True
-    exit(main(args))
+    # args = Namespace()
+    # args.files = ["example/for_each.hexparse"]
+    # args.quiet = False
+    # args.command = None
+    # args.interactive = True
+    # exit(main(args))
 
-    # exit(main())
+    exit(main())
 
 """
 运行示例：

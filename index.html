@@ -1497,11 +1497,10 @@ print`
             }
 
             formatValue(val) {
-                if (val === null || val === undefined) return 'null';
+                if (val === null || val === undefined) return 'NULL';
                 if (typeof val === 'boolean') return val ? 'true' : 'false';
                 if (typeof val === 'number') {
-                    if (Number.isInteger(val)) return val.toString();
-                    return val.toFixed(4);
+                    return val.toFixed(2);
                 }
                 if (val instanceof Vector) return val.toString();
                 if (val instanceof Entity) return val.name;
@@ -1578,7 +1577,7 @@ print`
                     } else {
                         switch (command) {
                             case '/stack':
-                                consoleLog(this.stack.map(v => this.formatValue(v)).join(', '), 'output');
+                                consoleLog('[' + this.stack.map(v => this.formatValue(v)).join(', ') + ']', 'output');
                                 break;
                             case '/clear':
                                 this.stack = [];
@@ -1808,10 +1807,151 @@ print`
                                     }
                                     // 每几条让出一次
                                     if ((i + 1) % 5 === 0) {
-                                        console.log("让出循环");
                                         await new Promise(resolve => setTimeout(resolve, 0));
                                     }
                                 }
+                                break;
+                            }
+                            case 'stack_len':
+                                this.push(this.stack.length);
+                                break;
+                            case '2dup': {
+                                const [a, b] = this.pop(Object, Object);
+                                this.push(a, b, a, b);
+                                break;
+                            }
+                            case 'last_n_list': {
+                                const count = Math.floor(this.pop(Number)[0]);
+                                const items = this.pop(...Array(count).fill(Object));
+                                this.push(items);
+                                break;
+                            }
+                            case 'splat': {
+                                const list = this.pop(Object)[0];
+                                if (Array.isArray(list)) {
+                                    this.push(...list);
+                                }
+                                break;
+                            }
+                            case 'index': {
+                                const [list, n] = this.pop(Object, Number);
+                                const idx = Math.floor(n);
+                                if (Array.isArray(list) && idx >= 0 && idx < list.length) {
+                                    this.push(list[idx]);
+                                } else {
+                                    this.push(null);
+                                }
+                                break;
+                            }
+                            case 'slice': {
+                                const [list, start, end] = this.pop(Object, Number, Number);
+                                const s = Math.floor(start);
+                                const e = Math.floor(end);
+                                if (Array.isArray(list)) {
+                                    this.push(list.slice(s, e));
+                                }
+                                break;
+                            }
+                            case 'append': {
+                                const [list, item] = this.pop(Object, Object);
+                                if (Array.isArray(list)) {
+                                    this.push([...list, item]);
+                                }
+                                break;
+                            }
+                            case 'concat': {
+                                const [l1, l2] = this.pop(Object, Object);
+                                if (Array.isArray(l1) && Array.isArray(l2)) {
+                                    this.push([...l1, ...l2]);
+                                }
+                                break;
+                            }
+                            case 'empty_list':
+                                this.push([]);
+                                break;
+                            case 'singleton': {
+                                const item = this.pop(Object)[0];
+                                this.push([item]);
+                                break;
+                            }
+                            case 'list_size': {
+                                const list = this.pop(Object)[0];
+                                if (Array.isArray(list)) {
+                                    this.push(list.length);
+                                }
+                                break;
+                            }
+                            case 'reverse_list': {
+                                const list = this.pop(Object)[0];
+                                if (Array.isArray(list)) {
+                                    this.push([...list].reverse());
+                                }
+                                break;
+                            }
+                            case 'index_of': {
+                                const [list, item] = this.pop(Object, Object);
+                                if (Array.isArray(list)) {
+                                    const idx = list.indexOf(item);
+                                    this.push(idx === -1 ? -1 : idx);
+                                }
+                                break;
+                            }
+                            case 'list_remove': {
+                                const [list, n] = this.pop(Object, Number);
+                                const idx = Math.floor(n);
+                                if (Array.isArray(list)) {
+                                    this.push([...list.slice(0, idx), ...list.slice(idx + 1)]);
+                                }
+                                break;
+                            }
+                            case 'modify_in_place': {
+                                const [list, n, item] = this.pop(Object, Number, Object);
+                                const idx = Math.floor(n);
+                                if (Array.isArray(list) && idx >= 0 && idx < list.length) {
+                                    const newList = [...list];
+                                    newList[idx] = item;
+                                    this.push(newList);
+                                }
+                                break;
+                            }
+                            case 'construct': {
+                                const [list, item] = this.pop(Object, Object);
+                                if (Array.isArray(list)) {
+                                    this.push([item, ...list]);
+                                }
+                                break;
+                            }
+                            case 'deconstruct': {
+                                const list = this.pop(Object)[0];
+                                if (Array.isArray(list) && list.length === 0) {
+                                    this.push([], null);
+                                } else if (Array.isArray(list)) {
+                                    this.push(list.slice(1), list[0]);
+                                }
+                                break;
+                            }
+                            case 'for_each': {
+                                const [commands, iterable] = this.pop(Object, Object);
+                                if (!Array.isArray(commands) || !Array.isArray(iterable)) break;
+                                const result = [];
+                                for (const item of iterable) {
+                                    // 创建副本栈
+                                    const newStack = new MindStack(this.caster, this.world, this.verbose);
+                                    newStack.stack = [...this.stack];
+                                    newStack.push(item);
+                                    for (const cmd of commands) {
+                                        if (this.verbose) {
+                                            const indent = '    '.repeat(this.introspectLevel);
+                                            consoleLog(`${indent}for_each> ${cmd}`, 'input');
+                                        }
+                                        const r = await newStack.runCommand(cmd);
+                                        if (r === 'accident') {
+                                            throw new Error('EvalAccident');
+                                        }
+                                    }
+                                    result.push(...newStack.stack);
+                                }
+                                this.push(result);
                                 break;
                             }
                             case 'halt':
