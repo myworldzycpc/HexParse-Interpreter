@@ -1882,7 +1882,7 @@ print`
                 const val = mind.stack[i];
                 const isList = Array.isArray(val);
                 const formatted = mind.formatValue(val);
-                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val ${isList ? 'list' : ''}">${formatted}</span></div>`;
+                html += `<div class="stack-item"><span class="stack-idx">#${count - i - 1}</span><span class="stack-val ${isList ? 'list' : ''}">${formatted}</span></div>`;
             }
             stackContainer.innerHTML = html;
         }
