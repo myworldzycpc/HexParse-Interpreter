@@ -1470,13 +1470,14 @@ print`
         }
 
         class MindStack {
-            constructor(caster, world) {
+            constructor(caster, world, verbose = true) {
                 this.stack = [];
                 this.caster = caster;
                 this.world = world;
                 this.local = null;
                 this.introspect = [];
                 this.introspectLevel = 0;
+                this.verbose = verbose;
             }
 
             formatValue(val) {
@@ -1497,17 +1498,19 @@ print`
 
             push(...items) {
                 // Display push
-                let displayStr;
-                if (this.stack.length > 20) {
-                    const visible = this.stack.slice(-20);
-                    displayStr = `[...(${this.stack.length - 20} more), ${visible.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
-                } else {
-                    displayStr = `[${this.stack.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
+                if (this.verbose) {
+                    let displayStr;
+                    if (this.stack.length > 20) {
+                        const visible = this.stack.slice(-20);
+                        displayStr = `[...(${this.stack.length - 20} more), ${visible.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
+                    } else {
+                        displayStr = `[${this.stack.map(v => this.formatValue(v)).join(', ')}, *${items.map(v => this.formatValue(v)).join(', ')}]`;
+                    }
+                    if (displayStr.length > 100) {
+                        displayStr = displayStr.slice(0, 50) + '...' + displayStr.slice(-50);
+                    }
+                    consoleLog(displayStr, 'output');
                 }
-                if (displayStr.length > 100) {
-                    displayStr = displayStr.slice(0, 50) + '...' + displayStr.slice(-50);
-                }
-                consoleLog(displayStr, 'output');
 
                 this.stack.push(...items);
                 updateStackDisplay(this);
@@ -1536,7 +1539,9 @@ print`
                             throw new Error('TypeAccident');
                         }
                     }
-                    consoleLog(`~ [${removed.map(v => this.formatValue(v)).join(', ')}]`, 'info');
+                    if (this.verbose) {
+                        consoleLog(`~ [${removed.map(v => this.formatValue(v)).join(', ')}]`, 'info');
+                    }
                     updateStackDisplay(mindStack);
                     return removed;
                 }
@@ -1566,6 +1571,14 @@ print`
                                 break;
                             case '/local':
                                 consoleLog(`local: ${this.formatValue(this.local)}`, 'output');
+                                break;
+                            case '/verbose':
+                                this.verbose = true;
+                                consoleLog('详细模式已开启', 'success');
+                                break;
+                            case '/quiet':
+                                this.verbose = false;
+                                consoleLog('安静模式已开启', 'success');
                                 break;
                             case 'print': {
                                 const value = this.pop(Object)[0];
@@ -1763,7 +1776,9 @@ print`
                                 for (let i = 0; i < list.length; i++) {
                                     const cmd = list[i];
                                     const indent = '    '.repeat(this.introspectLevel);
-                                    consoleLog(`${indent}eval> ${cmd}`, 'input');
+                                    if (this.verbose) {
+                                        consoleLog(`${indent}eval> ${cmd}`, 'input');
+                                    }
                                     const result = await this.runCommand(cmd);
                                     if (result === 'accident') {
                                         throw new Error('EvalAccident');
@@ -1821,7 +1836,9 @@ print`
                 for (let i = 0; i < commands.length; i++) {
                     const cmd = commands[i];
                     const indent = '    '.repeat(this.introspectLevel);
-                    consoleLog(`${indent}run_program> ${cmd}`, 'input');
+                    if (this.verbose) {
+                        consoleLog(`${indent}run_program> ${cmd}`, 'input');
+                    }
 
                     let result = await this.runCommand(cmd);
 
@@ -1834,7 +1851,6 @@ print`
 
                     // 每执行几条让出一次事件循环，避免卡顿
                     if ((i + 1) % 5 === 0) {
-                        console.log("让出循环");
                         await new Promise(resolve => setTimeout(resolve, 0));
                     }
                 }

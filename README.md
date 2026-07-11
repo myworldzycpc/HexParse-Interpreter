@@ -21,9 +21,9 @@
 
 ### 基本图案
 
-- `get_caster`： **意识之精思** ：获取施法者
-- `entity_pos/eye`： **指南针之纯化** ：获取实体眼部坐标
-- `entity_pos/foot`： **指南针之纯化（第二型）** ：获取实体脚部坐标
+- `get_caster`：获取 `caster`
+- `entity_pos/eye`：获取实体眼部坐标
+- `entity_pos/foot`：获取实体脚部坐标
 - `print`
 - `const/true`
 - `const/false`
@@ -51,7 +51,7 @@
 - `eval`
 - `halt`
 
-### 法术
+### 世界操作
 
 - `break_block`
 - `place_block`

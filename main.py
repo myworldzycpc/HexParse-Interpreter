@@ -66,22 +66,24 @@ class World:
 
 
 class MindStack:
-    def __init__(self, caster: Entity, world: World):
+    def __init__(self, caster: Entity, world: World, verbose: bool = True):
         self.stack = []
         self.caster = caster
         self.world = world
         self.local = None
         self.introspect = []
         self.introspect_level = 0
+        self.verbose = verbose
 
     def push(self, *item):
-        if len(self.stack) > 20:
-            display_str = f"[...({len(self.stack) - 20} more), {"".join(f"{i}, " for i in self.stack[-20:])}*{", ".join(str(i) for i in item)}]"
-        else:
-            display_str = f"[{"".join(f"{i}, " for i in self.stack)}*{", ".join(str(i) for i in item)}]"
-        if len(display_str) > 100:
-            display_str = display_str[:50] + "..." + display_str[-50:]
-        print(display_str)
+        if self.verbose:
+            if len(self.stack) > 20:
+                display_str = f"[...({len(self.stack) - 20} more), {"".join(f"{i}, " for i in self.stack[-20:])}*{", ".join(str(i) for i in item)}]"
+            else:
+                display_str = f"[{"".join(f"{i}, " for i in self.stack)}*{", ".join(str(i) for i in item)}]"
+            if len(display_str) > 100:
+                display_str = display_str[:50] + "..." + display_str[-50:]
+            print(display_str)
         self.stack.extend(item)
 
     def pop(self, *args):
@@ -92,7 +94,8 @@ class MindStack:
             for i, (val, type) in enumerate(zip(removed, args)):
                 if not isinstance(val, type):
                     raise TypeAccident(count - 1 - i, type, val)
-            print(f"~ {removed}")
+            if self.verbose:
+                print(f"~ {removed}")
             return removed
         raise IndexAccident(count)
 
@@ -113,6 +116,12 @@ class MindStack:
                         print("已清空栈")
                     case '/local':
                         print(f"local: {self.local}")
+                    case '/verbose':
+                        self.verbose = True
+                        print("详细模式已开启")
+                    case '/quiet':
+                        self.verbose = False
+                        print("安静模式已开启")
                     case '/get_block':
                         pos = input("请输入要获取的方块位置：")
                         pos: tuple[int, int, int] = tuple(map(int, pos.split()))
@@ -242,7 +251,8 @@ class MindStack:
                         elif isinstance(to_eval, list):
                             l = to_eval
                         for i in l:
-                            print(f"{" " * 4 * self.introspect_level}eval> {i}")
+                            if self.verbose:
+                                print(f"{" " * 4 * self.introspect_level}eval> {i}")
                             if not self.run_command(i) == 'success':
                                 if self.run_command(i) == 'accident':
                                     raise EvalAccident
@@ -285,7 +295,8 @@ class MindStack:
 
     def run_program(self, text):
         for cmd in split_command(text):
-            print(f"{" " * 4 * self.introspect_level}run_program> {cmd}")
+            if self.verbose:
+                print(f"{" " * 4 * self.introspect_level}run_program> {cmd}")
             if not self.run_command(cmd) == 'success':
                 break
 
@@ -386,13 +397,55 @@ def split_command(text):
 
 STONE = Block("stone")
 
-if __name__ == '__main__':
-    # start_repl()
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog='hexparse',
+        description='HexParse 解释器 - 基于栈的编程语言',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+示例:
+  python main.py              启动 REPL
+  python main.py script.hex   运行脚本文件
+  python main.py a.hex b.hex  依次运行多个文件（共享栈）
+  python main.py -c "num_1 num_2 add"  执行命令
+  python main.py -i script.hex   运行文件后进入 REPL
+  python main.py -q script.hex  安静模式（仅显示错误和 print）
+        '''
+    )
+    parser.add_argument('files', nargs='*', help='要运行的脚本文件')
+    parser.add_argument('-c', '--command', help='直接执行命令字符串')
+    parser.add_argument('-i', '--interactive', action='store_true', help='运行后进入交互模式 (REPL)')
+    parser.add_argument('-q', '--quiet', action='store_true', help='安静模式，隐藏执行提示')
+    
+    args = parser.parse_args()
+    verbose = not args.quiet
 
     caster = Entity("caster", Vector(0, 0, 0), 1.8)
-    m = MindStack(caster=caster, world=World())
-    # run_file(m, "画圆.hexparse")
-    start_repl(m)
+    m = MindStack(caster=caster, world=World(), verbose=verbose)
+
+    # 运行文件
+    for file_name in args.files:
+        try:
+            run_file(m, file_name)
+        except FileNotFoundError:
+            print(f"[错误] 文件不存在: {file_name}")
+            return 1
+
+    # 执行 -c 命令
+    if args.command:
+        m.run_program(args.command)
+
+    # 进入 REPL
+    if args.interactive or (not args.files and not args.command):
+        start_repl(m)
+    
+    return 0
+
+
+if __name__ == '__main__':
+    exit(main())
 
 """
 运行示例：
