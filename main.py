@@ -304,8 +304,60 @@ class MindStack:
                         items = self.pop(*([object] * count))
                         self.push(tuple(items))
                     case 'splat':
-                        l = self.pop(tuple)
+                        l = self.pop(tuple)[0]
                         self.push(*l)
+                    case 'index':
+                        l, n = self.pop(tuple, float)
+                        n = int(n)
+                        try:
+                            self.push(l[n])
+                        except IndexError:
+                            self.push(None)
+                    case 'slice':
+                        l, start, end = self.pop(tuple, float, float)
+                        start = int(start)
+                        end = int(end)
+                        if start > end:
+                            start, end = end, start
+                        self.push(tuple(l[start:end]))
+                    case 'append':
+                        l, item = self.pop(tuple, object)
+                        self.push(l + (item,))
+                    case 'concat':
+                        l1, l2 = self.pop(tuple, tuple)
+                        self.push(l1 + l2)
+                    case 'empty_list':
+                        self.push(())
+                    case 'singleton':
+                        self.push((self.pop(object)[0],))
+                    case 'list_size':
+                        self.push(len(self.pop(tuple)[0]))
+                    case 'reverse_list':
+                        self.push(tuple(reversed(self.pop(tuple)[0])))
+                    case 'index_of':
+                        l, item = self.pop(tuple, object)
+                        try:
+                            self.push(l.index(item))
+                        except ValueError:
+                            self.push(-1)
+                    case 'list_remove':
+                        l, n = self.pop(tuple, float)
+                        n = int(n)
+                        self.push(l[:n] + l[n + 1:])
+                    case 'modify_in_place':
+                        l, n, item = self.pop(tuple, float, object)
+                        n = int(n)
+                        if 0 <= n < len(l):
+                            self.push(l[:n] + (item,) + l[n + 1:])
+                    case 'construct':
+                        l, item = self.pop(tuple, object)
+                        self.push(tuple((item,) + l))
+                    case 'deconstruct':
+                        l = self.pop(tuple)[0]
+                        if len(l) == 0:
+                            self.push((), None)
+                        else:
+                            self.push(tuple(l[1:]), l[0])
                     case 'halt':
                         return 'halt'
                     case _ if re.match("num_.*", command):
