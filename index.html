@@ -1482,7 +1482,7 @@ print`
 
             formatValue(val) {
                 if (val === null || val === undefined) return 'null';
-                if (typeof val === 'boolean') return val ? 'True' : 'False';
+                if (typeof val === 'boolean') return val ? 'true' : 'false';
                 if (typeof val === 'number') {
                     if (Number.isInteger(val)) return val.toString();
                     return val.toFixed(4);
@@ -1882,8 +1882,7 @@ print`
                 const val = mind.stack[i];
                 const isList = Array.isArray(val);
                 const formatted = mind.formatValue(val);
-                const isTop = i === count - 1;
-                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val ${isList ? 'list' : ''}">${isTop ? '<span class="highlight">' + formatted + '</span>' : formatted}</span></div>`;
+                html += `<div class="stack-item"><span class="stack-idx">#${i}</span><span class="stack-val ${isList ? 'list' : ''}">${formatted}</span></div>`;
             }
             stackContainer.innerHTML = html;
         }
