@@ -1,6 +1,8 @@
 import math
 import re
 from abc import ABC, abstractmethod
+from argparse import Namespace
+from copy import copy
 from typing import Callable, Collection
 
 import numpy
@@ -37,6 +39,14 @@ class BlockPlacementAccident(NotAllowedOperationAccident):
 
     def __str__(self):
         return f"本应在{self.pos}处接受一个可放置方块的地方，而实际接受了{self.block}"
+
+
+class RunTypeAccident(NotAllowedOperationAccident):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return f"本应运行一个命令，而实际接受了{self.value}"
 
 
 class Block:
@@ -78,6 +88,11 @@ class MindStack:
         self.introspect_level = 0
         self.verbose = verbose
 
+    def copy_stack(self):
+        new_stack = MindStack(self.caster, self.world, self.verbose)
+        new_stack.stack = self.stack.copy()
+        return new_stack
+
     def push(self, *item):
         if self.verbose:
             if len(self.stack) > 20:
@@ -92,7 +107,7 @@ class MindStack:
     def pop(self, *args):
         count = len(args)
         if len(self.stack) >= count:
-            removed = self.stack[-count:]
+            removed = tuple(self.stack[-count:])
             del self.stack[-count:]
             for i, (val, type) in enumerate(zip(removed, args)):
                 if not isinstance(val, type):
@@ -108,6 +123,8 @@ class MindStack:
 
     def run_command(self, command):
         try:
+            if not isinstance(command, str):
+                raise RunTypeAccident(command)
             if self.introspect_level > 0 and command not in '()':
                 self.introspect.append(command)
             else:
@@ -163,12 +180,16 @@ class MindStack:
                         self.set_local(self.pop(object)[0])
                     case 'duplicate':
                         self.push(*(self.pop(object) * 2))
+                    case '2dup':
+                        self.push(*(self.pop(object, object) * 2))
                     case 'over':
                         a, b = self.pop(object, object)
                         self.push(a, b, a)
                     case 'swap':
                         a, b = self.pop(object, object)
                         self.push(b, a)
+                    case 'stack_len':
+                        self.push(len(self.stack))
                     case 'construct_vec':
                         x, y, z = self.pop(float, float, float)
                         self.push(Vector(x, y, z))
@@ -243,25 +264,48 @@ class MindStack:
                         if self.introspect_level == 0:
                             raise IntrospectAccident
                         elif self.introspect_level == 1:
-                            self.push(self.introspect)
+                            self.push(tuple(self.introspect))
                             self.introspect = []
                             self.introspect_level -= 1
                         else:
                             self.introspect.append(command)
                             self.introspect_level -= 1
                     case 'eval':
-                        to_eval = self.pop(str | list)[0]
-                        l = []
+                        to_eval = self.pop(str | tuple)[0]
+                        l = ()
                         if isinstance(to_eval, str):
-                            l = [to_eval]
-                        elif isinstance(to_eval, list):
+                            l = (to_eval,)
+                        elif isinstance(to_eval, tuple):
                             l = to_eval
                         for i in l:
                             if self.verbose:
                                 print(f"{" " * 4 * self.introspect_level}eval> {i}")
-                            if not self.run_command(i) == 'success':
-                                if self.run_command(i) == 'accident':
+                            run_result = self.run_command(i)
+                            if not run_result == 'success':
+                                if run_result == 'accident':
                                     raise EvalAccident
+                    case 'for_each':
+                        commands, iterable = self.pop(tuple, tuple)
+                        result = []
+                        for i in iterable:
+                            new_stack = self.copy_stack()
+                            new_stack.push(i)
+                            for c in commands:
+                                if self.verbose:
+                                    print(f"{" " * 4 * (self.introspect_level + new_stack.introspect_level)}for_each> {c}")
+                                run_result = new_stack.run_command(c)
+                                if not run_result == 'success':
+                                    if run_result == 'accident':
+                                        raise EvalAccident
+                            result.extend(new_stack.stack)
+                        self.push(tuple(result))
+                    case 'last_n_list':
+                        count = int(self.pop(float)[0])
+                        items = self.pop(*([object] * count))
+                        self.push(tuple(items))
+                    case 'splat':
+                        l = self.pop(tuple)
+                        self.push(*l)
                     case 'halt':
                         return 'halt'
                     case _ if re.match("num_.*", command):
@@ -382,8 +426,8 @@ class Vector:
 
 def start_repl(mind_stack: MindStack):
     while True:
-        text = input(f"{" " * 4 * m.introspect_level}> ")
-        m.run_program(text)
+        text = input(f"{" " * 4 * mind_stack.introspect_level}> ")
+        mind_stack.run_program(text)
 
 
 def run_file(mind_stack: MindStack, file_name: str):
@@ -404,28 +448,30 @@ def split_command(text):
 STONE = Block("stone")
 
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(
-        prog='hexparse',
-        description='HexParse 解释器 - 基于栈的编程语言',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''
+def main(args=None):
+    if args is None:
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog='hexparse',
+            description='HexParse 解释器 - 基于栈的编程语言',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog='''
 示例:
-  python main.py              启动 REPL
-  python main.py script.hex   运行脚本文件
-  python main.py a.hex b.hex  依次运行多个文件（共享栈）
-  python main.py -c "num_1 num_2 add"  执行命令
-  python main.py -i script.hex   运行文件后进入 REPL
-  python main.py -q script.hex  安静模式（仅显示错误和 print）
-        '''
-    )
-    parser.add_argument('files', nargs='*', help='要运行的脚本文件')
-    parser.add_argument('-c', '--command', help='直接执行命令字符串')
-    parser.add_argument('-i', '--interactive', action='store_true', help='运行后进入交互模式 (REPL)')
-    parser.add_argument('-q', '--quiet', action='store_true', help='安静模式，隐藏执行提示')
+    python main.py              启动 REPL
+    python main.py script.hex   运行脚本文件
+    python main.py a.hex b.hex  依次运行多个文件（共享栈）
+    python main.py -c "num_1 num_2 add"  执行命令
+    python main.py -i script.hex   运行文件后进入 REPL
+    python main.py -q script.hex  安静模式（仅显示错误和 print）
+            '''
+        )
+        parser.add_argument('files', nargs='*', help='要运行的脚本文件')
+        parser.add_argument('-c', '--command', help='直接执行命令字符串')
+        parser.add_argument('-i', '--interactive', action='store_true', help='运行后进入交互模式 (REPL)')
+        parser.add_argument('-q', '--quiet', action='store_true', help='安静模式，隐藏执行提示')
 
-    args = parser.parse_args()
+        args = parser.parse_args()
+
     verbose = not args.quiet
 
     caster = Entity("caster", Vector(0, 0, 0), 1.8)
@@ -451,7 +497,14 @@ def main():
 
 
 if __name__ == '__main__':
-    exit(main())
+    args = Namespace()
+    args.files = ["example/for_each.hexparse"]
+    args.quiet = False
+    args.command = None
+    args.interactive = True
+    exit(main(args))
+
+    # exit(main())
 
 """
 运行示例：
