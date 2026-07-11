@@ -1463,7 +1463,7 @@ print`
                 const key = pos.join(',');
                 if (this.blocks[key]) {
                     consoleLog(`[Accident] 本应在位置(${pos.join(', ')})处接受一个可放置方块的地方，而实际接受了${block.name}`, 'error');
-                    return false;
+                    throw new Error('NotAllowedOperationAccident');
                 }
                 this.blocks[key] = block;
                 consoleLog(`place_block: 已在位置(${pos.join(', ')})处放置方块${block.name}`, 'success');
@@ -1478,6 +1478,10 @@ print`
                 } else {
                     consoleLog(`break_block: 位置(${pos.join(', ')})处没有方块`, 'info');
                 }
+            }
+
+            clear() {
+                this.blocks = {};
             }
         }
 
@@ -1580,6 +1584,10 @@ print`
                                 this.stack = [];
                                 consoleLog('已清空栈', 'success');
                                 updateStackDisplay(this);
+                                break;
+                            case '/clear_world':
+                                this.world.clear();
+                                consoleLog('已清空世界', 'success');
                                 break;
                             case '/local':
                                 consoleLog(`local: ${this.formatValue(this.local)}`, 'output');
@@ -1834,7 +1842,7 @@ print`
                 } catch (e) {
                     if (e.message === 'IndexAccident' || e.message === 'TypeAccident' ||
                         e.message === 'NameAccident' || e.message === 'IntrospectAccident' ||
-                        e.message === 'DivisionAccident') {
+                        e.message === 'DivisionAccident' || e.message === 'NotAllowedOperationAccident') {
                         return 'accident';
                     }
                     throw e;

@@ -64,6 +64,9 @@ class World:
         else:
             print(f"break_block: 位置{pos}处没有方块")
 
+    def clear(self):
+        self.blocks.clear()
+
 
 class MindStack:
     def __init__(self, caster: Entity, world: World, verbose: bool = True):
@@ -114,6 +117,9 @@ class MindStack:
                     case '/clear':
                         self.stack.clear()
                         print("已清空栈")
+                    case '/clear_world':
+                        self.world.clear()
+                        print("世界已清空")
                     case '/local':
                         print(f"local: {self.local}")
                     case '/verbose':
@@ -418,7 +424,7 @@ def main():
     parser.add_argument('-c', '--command', help='直接执行命令字符串')
     parser.add_argument('-i', '--interactive', action='store_true', help='运行后进入交互模式 (REPL)')
     parser.add_argument('-q', '--quiet', action='store_true', help='安静模式，隐藏执行提示')
-    
+
     args = parser.parse_args()
     verbose = not args.quiet
 
@@ -440,7 +446,7 @@ def main():
     # 进入 REPL
     if args.interactive or (not args.files and not args.command):
         start_repl(m)
-    
+
     return 0
 
 
