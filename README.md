@@ -63,7 +63,7 @@ python main.py -q script.hexparse
 | `duplicate` | 复制栈顶元素 | `a` | `a, a` |
 | `swap` | 交换栈顶两个元素 | `a, b` | `b, a` |
 | `over` | 复制倒数第二个元素到栈顶 | `a, b` | `a, b, a` |
-| `pop` | 弹出栈顶元素 | `a` | - |
+| `mask_*` | 选择性擦除栈顶元素 | 一个或多个元素               | 按掩码提取 |
 
 ### 常量
 
@@ -94,7 +94,6 @@ python main.py -q script.hexparse
 | 命令 | 功能        | 入栈                    | 出栈 |
 |------|-----------|-----------------------|------|
 | `construct_vec` | 构造三维向量    | `float, float, float` | `Vector` |
-| `mask_*` | 选择性擦除栈顶元素 | 一个或多个元素               | 按掩码提取 |
 
 ### 局部变量
 
